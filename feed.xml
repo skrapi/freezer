@@ -1,0 +1,1624 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>x86.lol</title>
+    <description>I&apos;m blogging about low-level topics and my operating system projects on x86 and RISC-V.</description>
+    <link>https://x86.lol/</link>
+    <atom:link href="https://x86.lol/feed.xml" rel="self" type="application/rss+xml"/>
+    <pubDate>Sun, 10 Aug 2025 15:56:16 +0000</pubDate>
+    <lastBuildDate>Sun, 10 Aug 2025 15:56:16 +0000</lastBuildDate>
+    <generator>Jekyll v3.10.0</generator>
+    
+      <item>
+        <title>Quick and Dirty Website Change Monitoring</title>
+        <description>&lt;p&gt;Let’s say, you need to monitor a website for changes and you really
+don’t have a lot of time to set things up. Also solving the problem
+with money using services, such as
+&lt;a href=&quot;https://changedetection.io/&quot;&gt;changedetection.io&lt;/a&gt; or
+&lt;a href=&quot;https://visualping.io/&quot;&gt;visualping.io&lt;/a&gt;, have failed you, because
+their accesses are probably filtered out.&lt;/p&gt;
+
+&lt;p&gt;I’ve come up with the following scrappy solution. First, I want to get
+push notifications to my phone. So I installed
+&lt;a href=&quot;https://simplepush.io/&quot;&gt;simplepush&lt;/a&gt; on my phone. There are a couple
+of these services, this was just the first I found and it works well.&lt;/p&gt;
+
+&lt;p&gt;I have a couple of Linux servers. So I just logged in to one,
+installed &lt;a href=&quot;https://github.com/dschep/ntfy&quot;&gt;ntfy&lt;/a&gt; and the &lt;a href=&quot;https://en.wikipedia.org/wiki/Links_%28web_browser%29&quot;&gt;Links
+text-based web
+browser&lt;/a&gt;
+(probably &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;links2&lt;/code&gt; in your package manager).&lt;/p&gt;
+
+&lt;p&gt;Configure &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ntfy&lt;/code&gt; with your simplepush key:&lt;/p&gt;
+
+&lt;div class=&quot;language-yaml highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;# ~/.config/ntfy/ntfy.yml &lt;/span&gt;
+&lt;span class=&quot;na&quot;&gt;backends&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt;
+  &lt;span class=&quot;pi&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;simplepush&lt;/span&gt;
+&lt;span class=&quot;na&quot;&gt;simplepush&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt;
+  &lt;span class=&quot;na&quot;&gt;key&lt;/span&gt;&lt;span class=&quot;pi&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;12345&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Afterwards, you can just dump the website to a text file with Links
+and send a push notification to your phone when something changes:&lt;/p&gt;
+
+&lt;div class=&quot;language-sh highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;#!/usr/bin/env bash&lt;/span&gt;
+
+&lt;span class=&quot;c&quot;&gt;# By starting without old.txt, we get a notification when we start the script&lt;/span&gt;
+&lt;span class=&quot;nb&quot;&gt;rm&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-f&lt;/span&gt; old.txt
+
+&lt;span class=&quot;c&quot;&gt;# Let&apos;s be polite here and not hammer the site.&lt;/span&gt;
+&lt;span class=&quot;nv&quot;&gt;POLL_FREQ_MIN&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;15
+
+&lt;span class=&quot;nv&quot;&gt;URL&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;https://example.com/&quot;&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;while &lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;true&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do
+    &lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;touch &lt;/span&gt;old.txt
+    links &lt;span class=&quot;nt&quot;&gt;-dump&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$URL&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; new.txt
+
+    &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!&lt;/span&gt; diff &lt;span class=&quot;nt&quot;&gt;-u&lt;/span&gt; old.txt new.txt &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; diff.txt&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;then&lt;/span&gt;
+		&lt;span class=&quot;c&quot;&gt;# It&apos;s hard to condense the changes (diff.txt) into something readable,&lt;/span&gt;
+		&lt;span class=&quot;c&quot;&gt;# so we just send the URL to easily click on on the phone.&lt;/span&gt;
+        ntfy send &lt;span class=&quot;s2&quot;&gt;&quot;Check &lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$URL&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;fi
+
+    &lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;mv &lt;/span&gt;new.txt old.txt
+
+    &lt;span class=&quot;nb&quot;&gt;sleep&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;$((&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$POLL_FREQ_MIN&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;m&quot;&gt;60&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;))&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;done&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;This only works for simple websites and there is a lot left to be
+desired. But it is doable in the 10 minutes of productivity a newborn
+baby gives you and it works to get appointments at government offices
+in Spain. 😉&lt;/p&gt;
+
+&lt;p&gt;PS. This blog post was written in another 10-minute productivity
+window.&lt;/p&gt;
+</description>
+        <pubDate>Sun, 10 Aug 2025 00:00:00 +0000</pubDate>
+        <link>https://x86.lol/generic/2025/08/10/change-monitoring.html</link>
+        <guid isPermaLink="true">https://x86.lol/generic/2025/08/10/change-monitoring.html</guid>
+        
+        
+        <category>generic</category>
+        
+      </item>
+    
+      <item>
+        <title>FOSDEM Edition: Thoughts on the Microkernels</title>
+        <description>&lt;p&gt;It’s &lt;a href=&quot;https://fosdem.org/2025/&quot;&gt;FOSDEM&lt;/a&gt; time!  I have fond memories of
+the &lt;a href=&quot;https://fosdem.org/2025/schedule/track/microkernel/&quot;&gt;Microkernel and Component-based OS
+devroom&lt;/a&gt; in
+particular. It’s a fun meetup of extremely skilled low-level software
+engineers. This year I cannot attend, so it’s a good time to
+&lt;del&gt;ramble&lt;/del&gt; reflect on it.&lt;/p&gt;
+
+&lt;h2 id=&quot;some-background&quot;&gt;Some Background&lt;/h2&gt;
+
+&lt;p&gt;The community around this devroom has one epicenter in Dresden, where
+many of us met at the &lt;a href=&quot;https://tu-dresden.de/ing/informatik/sya/professur-fuer-betriebssysteme?set_language=en&quot;&gt;Operating Systems
+Group&lt;/a&gt;
+at the university. Dresden has a lively systems community, and
+microkernel enthusiasts are a big part of it. For a large part of my
+professional life, I was working on microkernel-based systems, too.&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://en.wikipedia.org/wiki/Microkernel&quot;&gt;Microkernel&lt;/a&gt;-based systems
+are appealing. They result naturally, if you take the idea of Least
+Privilege to its logical end. They also arise naturally, if you
+architect an operating system in a rigorously
+&lt;a href=&quot;https://wstomv.win.tue.nl/edu/2ip30/references/criteria_for_modularization.pdf&quot;&gt;modular&lt;/a&gt;
+fashion.&lt;/p&gt;
+
+&lt;p&gt;On paper systems based on microkernels promise clean architecture and
+extremely secure systems due to a tiny &lt;a href=&quot;https://en.wikipedia.org/wiki/Trusted_computing_base&quot;&gt;Trusted Computing
+Base&lt;/a&gt;. In
+reality, despite the conceptual advantages, the microkernel-based
+systems struggle to achieve traction outside of niches.&lt;/p&gt;
+
+&lt;h2 id=&quot;the-problem&quot;&gt;The Problem&lt;/h2&gt;
+
+&lt;p&gt;Some years ago, I sat in a bar with a friend from the microkernel
+community. We talked a long time about the issues in the
+community. Despite the common goal of a component-based and secure
+systems in the community, the point he made was that the inability to
+work together is self-limiting for each project. Instead of everyone
+collaborating towards the common goal, each company is reinventing the
+wheel. Developers are excited to implement a new
+&lt;a href=&quot;https://en.wikipedia.org/wiki/Inter-process_communication&quot;&gt;IPC&lt;/a&gt; path
+that shaves five cycles off compared to the other microkernel’s IPC
+path or boast about their small TCB, even though this rarely works
+towards what users would actually need.&lt;/p&gt;
+
+&lt;p&gt;This conversation stuck in my head, and I had some years to reflect on
+it. There are a couple of causes at the core of this problem. The main
+cause, in my opinion, is that the personality that is required to
+bootstrap a project is not the best personality to make that project
+grow.&lt;/p&gt;
+
+&lt;h2 id=&quot;starting-vs-growing-a-project&quot;&gt;Starting vs. Growing a Project&lt;/h2&gt;
+
+&lt;p&gt;Starting a new operating system project requires strong opinions. You
+want your system to have certain properties. You are not willing to
+compromise because if you are in the compromising mindset, you could
+have &lt;a href=&quot;https://doc.cat-v.org/bell_labs/utah2000/utah2000.html&quot;&gt;just used Linux&lt;/a&gt;. Linux is everything to everyone, so you could
+have squinted your eyes to build your ideas on top of it. Instead, you
+chose to start over because your ideas were so important to you that
+you were not willing to compromise.&lt;/p&gt;
+
+&lt;p&gt;In this bootstrapping phase, you are typically alone or work with few
+disciples that intimately share your vision. You freely implement
+things your way. If you need a custom build system to fine-tune your
+build flow, why not write one as well!&lt;/p&gt;
+
+&lt;p&gt;At some point, you reach a state where it’s challenging to make
+meaningful progress without external contributions to work on larger
+use cases and iron out the kinks of a still-niche project. You need to
+grow a community.&lt;/p&gt;
+
+&lt;p&gt;To grow a community, you need an entirely different skill set. The
+lone hacker with a clear vision in their mind is not equipped to do
+this. Instead of writing beautifully crafted code yourself, you need
+to be the inspiring leader that rallies people to your cause and
+establishes structures that will outlast yourself. New developers will
+come with new ideas and different ways of working. Some of your
+initial idiosyncratic choices have to give way, while the overall
+vision remains and evolves.&lt;/p&gt;
+
+&lt;p&gt;The person who spent hours implementing their own build system now has
+to contend with people who say there is a better tool to do the
+job. And better here usually means much better for them, but worse for
+you because the old system was carefully polished for your own use
+case.&lt;/p&gt;
+
+&lt;p&gt;So now it’s time to compromise. Do you insist on having this special
+build system, or do you switch to something other people are familiar
+with? If you keep insisting on your idiosyncrasies that are not core
+to the mission of the project, you risk alienating contributors.&lt;/p&gt;
+
+&lt;p&gt;To summarize: The skills that you need to start a radical new project
+are the skills that will not help you in growing a community.&lt;/p&gt;
+
+&lt;h2 id=&quot;my-wishes&quot;&gt;My Wishes&lt;/h2&gt;
+
+&lt;p&gt;My wishes for the community are to find a way to collaborate instead
+of starting all over again and again. We need to attrach users. We
+need to find the “killer app”, where these kinds of systems are
+obviously better than Linux. And this niche cannot be just pleasing
+the &lt;a href=&quot;https://www.bsi.bund.de/&quot;&gt;BSI&lt;/a&gt; in certifications.&lt;/p&gt;
+
+&lt;p&gt;Systems must be trivial to use and contribute to. We need to embrace
+open source and open decision processes. No
+&lt;a href=&quot;https://en.wikipedia.org/wiki/Contributor_License_Agreement&quot;&gt;CLAs&lt;/a&gt;!
+Make it trivial to use and to contribute.&lt;/p&gt;
+
+&lt;p&gt;We must work together!&lt;/p&gt;
+</description>
+        <pubDate>Thu, 30 Jan 2025 00:00:00 +0000</pubDate>
+        <link>https://x86.lol/generic/2025/01/30/microkernels.html</link>
+        <guid isPermaLink="true">https://x86.lol/generic/2025/01/30/microkernels.html</guid>
+        
+        
+        <category>generic</category>
+        
+      </item>
+    
+      <item>
+        <title>Hardening C Against ROP: Getting CET Shadow Stacks Working</title>
+        <description>&lt;p&gt;This post shows you how to use
+&lt;a href=&quot;https://www.intel.com/content/www/us/en/developer/articles/technical/technical-look-control-flow-enforcement-technology.html&quot;&gt;CET&lt;/a&gt;
+&lt;a href=&quot;https://lwn.net/Articles/885220/&quot;&gt;user shadow stacks&lt;/a&gt; on Linux. CET
+is a hardening technology that mitigates typical memory unsafety
+issues on x86. This post will not explain this security feature. If
+you don’t know what CET is, this post is probably not for you. For general
+advice on hardening C/C++, check out &lt;a href=&quot;https://best.openssf.org/Compiler-Hardening-Guides/Compiler-Options-Hardening-Guide-for-C-and-C++.html&quot;&gt;these
+guidelines&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Back to CET shadow stacks. Recent distros, such as &lt;a href=&quot;https://nixos.org/&quot;&gt;NixOS
+24.05&lt;/a&gt; and &lt;a href=&quot;https://fedoraproject.org/&quot;&gt;Fedora
+40&lt;/a&gt;, satisfy all the software
+requirements. If you’re not on one of these distros, you need to check
+whether you have the following prerequisites:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Linux 6.6 or later with &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;CONFIG_X86_USER_SHADOW_STACK=y&lt;/code&gt;&lt;/li&gt;
+  &lt;li&gt;glibc 2.39 or later&lt;/li&gt;
+  &lt;li&gt;A CPU supporting CET shadow stacks:
+    &lt;ul&gt;
+      &lt;li&gt;Intel Tiger Lake or later (?)&lt;/li&gt;
+      &lt;li&gt;AMD Zen 3 or later&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;GCC 8 or clang 7 or later&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;With this out of the way, let’s get it working. We use a tiny C
+program &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;test.c&lt;/code&gt; that simulates ROP:&lt;/p&gt;
+
+&lt;div class=&quot;language-c highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;cp&quot;&gt;#include&lt;/span&gt; &lt;span class=&quot;cpf&quot;&gt;&amp;lt;stdio.h&amp;gt;&lt;/span&gt;&lt;span class=&quot;cp&quot;&gt;
+&lt;/span&gt;
+&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;hello&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;printf&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;Return address corruption worked!&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\n&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;// &quot;Smash&quot; the stack to execute hello instead of returning directly. This&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;// should not work with shadow stacks.&lt;/span&gt;
+&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;foo&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;();&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;asm&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;foo: mov $hello, %rax; push %rax; ret&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+
+&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;foo&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;();&lt;/span&gt;
+  &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Compile this program with &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;-cf-protection=return&lt;/code&gt; (or &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;full&lt;/code&gt;) to
+enable shadow stack support:&lt;/p&gt;
+
+&lt;div class=&quot;language-console highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;gp&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;gcc &lt;span class=&quot;nt&quot;&gt;-fcf-protection&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-o&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;test &lt;/span&gt;test.c
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;If your toolchain is recent enough, you see that the binary is marked
+as supporting shadow stacks:&lt;/p&gt;
+
+&lt;div class=&quot;language-console highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;gp&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;readelf &lt;span class=&quot;nt&quot;&gt;-n&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;test&lt;/span&gt; | &lt;span class=&quot;nb&quot;&gt;grep &lt;/span&gt;SHSTK
+&lt;span class=&quot;go&quot;&gt;	  Properties: x86 feature: SHSTK
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Shadow stacks are &lt;em&gt;not&lt;/em&gt; enabled by default as of glibc 2.39. So without opting
+in, the test program will not use shadow stacks:&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;$ ./test
+Return address corruption worked!
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;You opt in to shadow stacks using a &lt;a href=&quot;https://www.gnu.org/software/libc/manual/html_node/Tunables.html&quot;&gt;glibc
+tunable&lt;/a&gt;. When
+everything works, you’ll see that the stack smashing is prevented:&lt;/p&gt;
+
+&lt;div class=&quot;language-console highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;gp&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;GLIBC_TUNABLES&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;glibc.cpu.hwcaps&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;SHSTK ./test
+&lt;span class=&quot;go&quot;&gt;[1]    14520 segmentation fault (core dumped)  GLIBC_TUNABLES=glibc.cpu.hwcaps=SHSTK ./test
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Now you can go out and try it out on more interesting software!&lt;/p&gt;
+</description>
+        <pubDate>Mon, 23 Sep 2024 00:00:00 +0000</pubDate>
+        <link>https://x86.lol/generic/2024/09/23/user-shadow-stacks.html</link>
+        <guid isPermaLink="true">https://x86.lol/generic/2024/09/23/user-shadow-stacks.html</guid>
+        
+        
+        <category>generic</category>
+        
+      </item>
+    
+      <item>
+        <title>Immutable Systems: Cross-Compiling for RISC-V using Nix Flakes</title>
+        <description>&lt;p&gt;In my &lt;a href=&quot;/generic/2024/08/28/systemd-sysupdate.html&quot;&gt;last post&lt;/a&gt;, we
+built whole disk images for embedded systems using
+&lt;a href=&quot;https://nixos.org&quot;&gt;Nix&lt;/a&gt;. This approach is well suited for RISC-V or
+ARM systems, but you probably don’t have a powerful build box for
+this architecture. You wouldn’t want to build a Linux kernel for hours
+on a &lt;a href=&quot;https://linux-sunxi.org/Allwinner_Nezha&quot;&gt;RISC-V single-board
+computer&lt;/a&gt; praying that you
+don’t run out of RAM…&lt;/p&gt;
+
+&lt;p&gt;In this blog post, we will use the &lt;em&gt;same NixOS configuration&lt;/em&gt; to
+&lt;em&gt;cross-compile&lt;/em&gt; system images for &lt;em&gt;x86&lt;/em&gt;, &lt;em&gt;RISC-V&lt;/em&gt; and &lt;em&gt;ARM&lt;/em&gt; from our
+powerful x86 build server.&lt;/p&gt;
+
+&lt;p&gt;Let’s go over some theory first and then look at how this applies to
+our flake from &lt;a href=&quot;/generic/2024/08/28/systemd-sysupdate.html&quot;&gt;the previous post&lt;/a&gt;. A complete example lives in
+&lt;a href=&quot;https://github.com/blitz/sysupdate-playground&quot;&gt;here&lt;/a&gt;. For the version
+that was current when this blog post was written, check out the
+&lt;a href=&quot;https://github.com/blitz/sysupdate-playground/tree/blog-post-2&quot;&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;blog-post-2&lt;/code&gt;
+tag&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h2 id=&quot;cross-compiling-nixos&quot;&gt;Cross-Compiling NixOS&lt;/h2&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://nixos.org/manual/nixpkgs/stable/&quot;&gt;nixpkgs&lt;/a&gt; has excellent &lt;a href=&quot;https://nixos.org/manual/nixpkgs/stable/#chap-cross&quot;&gt;cross-compilation
+support&lt;/a&gt;. There
+are also excellent resources for cross-compiling individual
+packages. Cross-compiling &lt;em&gt;whole systems&lt;/em&gt; is even easier, but not as
+well documented. There are two main ways to configure it. For a deeper
+discussion, check out &lt;a href=&quot;https://discourse.nixos.org/t/recommended-style-to-cross-compile-flake-nixossystems/45305&quot;&gt;this
+post&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h3 id=&quot;approach-1-nixpkgsbuildplatformhostplatform&quot;&gt;Approach 1: nixpkgs.buildPlatform/hostPlatform&lt;/h3&gt;
+
+&lt;p&gt;The first approach is to configure the build and host system in the
+NixOS configuration. The terminology that NixOS uses is:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;https://search.nixos.org/options?channel=unstable&amp;amp;show=nixpkgs.buildPlatform&amp;amp;from=0&amp;amp;size=50&amp;amp;sort=relevance&amp;amp;type=packages&amp;amp;query=buildPlatform&quot;&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;buildPlatform&lt;/code&gt;&lt;/a&gt;
+for configuring what kind of system does the actual build,&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://search.nixos.org/options?channel=unstable&amp;amp;show=nixpkgs.hostPlatform&amp;amp;from=0&amp;amp;size=50&amp;amp;sort=relevance&amp;amp;type=packages&amp;amp;query=hostPlatform&quot;&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;hostPlatform&lt;/code&gt;&lt;/a&gt;
+for configuring what kind of system the resulting binaries should
+run on.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;For me, the name &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;hostPlatform&lt;/code&gt; is somewhat ambiguous, but these are the names
+we are stuck with.&lt;/p&gt;
+
+&lt;p&gt;To configure a NixOS configuration for cross-compiling, you can use a
+module like this:&lt;/p&gt;
+
+&lt;div class=&quot;language-nix highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;...&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;nv&quot;&gt;nixpkgs&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;buildPlatform&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;x86_64-linux&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;nv&quot;&gt;nixpkgs&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;hostPlatform&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;riscv64-linux&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;approach-2-build-pkgs-yourself&quot;&gt;Approach 2: Build &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;pkgs&lt;/code&gt; Yourself&lt;/h3&gt;
+
+&lt;p&gt;The second approach is to build a cross-compiling &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;pkgs&lt;/code&gt; set yourself
+and then just use this for your NixOS configuration. Assuming
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;nixpkgs&lt;/code&gt; is the nixpkgs flake input, you can create it like this:&lt;/p&gt;
+
+&lt;div class=&quot;language-nix highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kd&quot;&gt;let&lt;/span&gt;
+  &lt;span class=&quot;c&quot;&gt;# Let&apos;s stick to the terminology from earlier.&lt;/span&gt;
+  &lt;span class=&quot;nv&quot;&gt;buildPlatform&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;x86_64-linux&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+  &lt;span class=&quot;nv&quot;&gt;hostPlatform&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;riscv64-linux&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+  &lt;span class=&quot;nv&quot;&gt;crossPkgs&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kr&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;nixpkgs&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;localSystem&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;buildPlatform&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;crossSystem&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;hostPlatform&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+  &lt;span class=&quot;c&quot;&gt;# ...&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;As you can see, we re-evaluate nixpkgs with parameters that enable
+cross-compilation. The challenge is mostly the changed terminology
+🫠. &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;localSystem&lt;/code&gt; is the system to build on and &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;crossSystem&lt;/code&gt; is the
+system where the final system needs to run.&lt;/p&gt;
+
+&lt;p&gt;The resulting &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;crossPkgs&lt;/code&gt; can then be used to configure
+cross-compilation in the NixOS configuration:&lt;/p&gt;
+
+&lt;div class=&quot;language-nix highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;...&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;nv&quot;&gt;nixpkgs&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;pkgs&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;crossPkgs&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;You cannot mix these approaches. If you set &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;nixpkgs.pkgs&lt;/code&gt;,
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;buildPlatform&lt;/code&gt; and &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;hostPlatform&lt;/code&gt; will be &lt;em&gt;ignored&lt;/em&gt;.&lt;/p&gt;
+
+&lt;h2 id=&quot;flakes-and-cross-compilation&quot;&gt;Flakes and Cross-Compilation&lt;/h2&gt;
+
+&lt;p&gt;To always cross-compile from your local system, you can set
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;buildPlatform&lt;/code&gt; to &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;builtins.currentSystem&lt;/code&gt;. This doesn’t work with
+flakes, because they don’t allow you to call
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;builtins.currentSystem&lt;/code&gt;. It would leak details of the build platform
+into the flake outputs. The flake would not be fully encapsulated and thus
+impure. This is one reason why flakes have a bad reputation when it
+comes to cross-compilation.&lt;/p&gt;
+
+&lt;p&gt;Despite the misgivings, cross-compiling with flakes works great. It’s
+just that the flake has to be &lt;em&gt;prepared&lt;/em&gt; for cross-compilation. Let’s
+go through that for the immutable appliance example.&lt;/p&gt;
+
+&lt;p&gt;When I wrote the example, I aimed for the following outputs for the
+flake:&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;packages
+├───riscv64-linux             # Cross-compiled
+│   ├───appliance_17_image
+│   ├───appliance_17_update
+│   ├───appliance_18_image
+│   └───appliance_18_update
+└───aarch64-linux             # Cross-compiled
+│   └ ...
+└───x86_64-linux
+    ├───appliance_17_image
+    ├───appliance_17_update
+    ├───appliance_18_image
+    └───appliance_18_update
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;As you see, each version of our example appliance produces one install
+disk image and one update package for systemd-sysupdate (see the &lt;a href=&quot;/generic/2024/08/28/systemd-sysupdate.html&quot;&gt;last
+post&lt;/a&gt; for how this is
+used).&lt;/p&gt;
+
+&lt;p&gt;To build all these images from x86, we only need to apply our
+theoretical knowledge from above to define &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;crossNixos&lt;/code&gt; as a
+convenience wrapper to add the cross-compilation module to an existing
+NixOS configuration:&lt;/p&gt;
+
+&lt;div class=&quot;language-nix highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;  &lt;span class=&quot;nv&quot;&gt;outputs&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;nixpkgs&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;flake-utils&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;...&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}:&lt;/span&gt;
+    &lt;span class=&quot;kd&quot;&gt;let&lt;/span&gt;
+      &lt;span class=&quot;c&quot;&gt;# The platform we want to build on. This should ideally be configurable.&lt;/span&gt;
+      &lt;span class=&quot;nv&quot;&gt;buildPlatform&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;x86_64-linux&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;kn&quot;&gt;in&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;flake-utils&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;lib&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;eachSystem&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;x86_64-linux&quot;&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;aarch64-linux&quot;&lt;/span&gt;
+                                  &lt;span class=&quot;s2&quot;&gt;&quot;riscv64-linux&quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;system&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;
+        &lt;span class=&quot;kd&quot;&gt;let&lt;/span&gt;
+          &lt;span class=&quot;c&quot;&gt;# We treat everything as cross-compilation without a special&lt;/span&gt;
+          &lt;span class=&quot;c&quot;&gt;# case for the build platform. Nixpkgs will do the right thing.&lt;/span&gt;
+          &lt;span class=&quot;nv&quot;&gt;crossPkgs&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kr&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;${&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;nixpkgs&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;localSystem&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;buildPlatform&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+                                            &lt;span class=&quot;nv&quot;&gt;crossSystem&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;system&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;};&lt;/span&gt;
+
+        &lt;span class=&quot;c&quot;&gt;# A convenience wrapper around lib.nixosSystem that configures&lt;/span&gt;
+        &lt;span class=&quot;c&quot;&gt;# cross-compilation.&lt;/span&gt;
+        &lt;span class=&quot;nv&quot;&gt;crossNixos&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;module&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;nixpkgs&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;lib&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;nixosSystem&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+          &lt;span class=&quot;nv&quot;&gt;modules&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+            &lt;span class=&quot;nv&quot;&gt;module&lt;/span&gt;
+
+            &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+              &lt;span class=&quot;nv&quot;&gt;nixpkgs&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;pkgs&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;crossPkgs&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+            &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+          &lt;span class=&quot;p&quot;&gt;];&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;};&lt;/span&gt;
+
+      &lt;span class=&quot;kn&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;c&quot;&gt;# ...&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;With this out of the way, we can then define a NixOS configuration
+that is cross-compiled for all our target architectures like this:&lt;/p&gt;
+
+&lt;div class=&quot;language-nix highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;        &lt;span class=&quot;nv&quot;&gt;appliance_18&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;crossNixos&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+          &lt;span class=&quot;nv&quot;&gt;imports&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+            &lt;span class=&quot;sx&quot;&gt;./base.nix&lt;/span&gt;
+            &lt;span class=&quot;sx&quot;&gt;./version-18.nix&lt;/span&gt;
+          &lt;span class=&quot;p&quot;&gt;];&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Note that we can use &lt;em&gt;the same configuration&lt;/em&gt; to generate system
+images for x86, RISC-V, and ARM and we build all of them on our beefy
+x86 build boxes! 🤯&lt;/p&gt;
+
+&lt;p&gt;It’s a nice exercise to make the build platform configurable. Check
+out &lt;a href=&quot;https://github.com/nix-systems/nix-systems&quot;&gt;nix-systems&lt;/a&gt; as a
+starting point.&lt;/p&gt;
+
+&lt;h2 id=&quot;running-the-images&quot;&gt;Running the Images&lt;/h2&gt;
+
+&lt;p&gt;If you are in the development shell, you can run the cross-compiled images
+in Qemu:&lt;/p&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;# uname -m&lt;/span&gt;
+x86_64
+
+&lt;span class=&quot;c&quot;&gt;# Enter the development shell that provides the qemu-efi convenience tool.&lt;/span&gt;
+&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;nix develop
+
+&lt;span class=&quot;c&quot;&gt;# Build the disk image for version 17 of the appliance.&lt;/span&gt;
+&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;nix &lt;span class=&quot;nt&quot;&gt;-L&lt;/span&gt; build .&lt;span class=&quot;se&quot;&gt;\#&lt;/span&gt;packages.riscv64-linux.appliance_17_image
+
+&lt;span class=&quot;c&quot;&gt;# Run the disk image as a VM.&lt;/span&gt;
+&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;qemu-efi riscv64 result/disk.qcow2
+...
+&lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;lt;&amp;lt;&lt;/span&gt; Welcome to ApplianceOS 24.11.20240906.574d1ea &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;riscv64&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; - ttyS0 &lt;span class=&quot;o&quot;&gt;&amp;gt;&amp;gt;&amp;gt;&lt;/span&gt;
+
+
+applianceos login: root &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;automatic login&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+
+root@applianceos &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;version 17&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;uname&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-m&lt;/span&gt;
+riscv64
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;By the way, if you want to know how to run a RISC-V UEFI VM with Qemu,
+check the &lt;a href=&quot;https://github.com/blitz/sysupdate-playground/blob/blog-post-2/buildHost.nix#L48&quot;&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;qemu-efi&lt;/code&gt;
+script&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h2 id=&quot;parting-words&quot;&gt;Parting Words&lt;/h2&gt;
+
+&lt;p&gt;If you have comments or suggestions about this style of
+cross-compilation with Nix, please reach out. I’m eager to hear them!&lt;/p&gt;
+</description>
+        <pubDate>Sat, 21 Sep 2024 00:00:00 +0000</pubDate>
+        <link>https://x86.lol/generic/2024/09/21/cross-compile-riscv.html</link>
+        <guid isPermaLink="true">https://x86.lol/generic/2024/09/21/cross-compile-riscv.html</guid>
+        
+        
+        <category>generic</category>
+        
+      </item>
+    
+      <item>
+        <title>Immutable Systems: NixOS + systemd-repart + systemd-sysupdate</title>
+        <description>&lt;p&gt;When you build software for embedded devices (your Wi-Fi router or home automation
+setup on your Raspberry Pi), there is always the question how to build
+these images and how to update them. What I want is:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;A mostly immutable system with few moving parts.&lt;/li&gt;
+  &lt;li&gt;A disk image that can be written to disk without a complicated installation procedure.&lt;/li&gt;
+  &lt;li&gt;A simple mechanism to securely download updates from the Internet.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;There are bonus points for:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;https://source.android.com/docs/core/ota/ab&quot;&gt;A/B updates&lt;/a&gt; with automatic rollback.&lt;/li&gt;
+  &lt;li&gt;Integrity protection for system images.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;The systemd project has tooling that solves these problems:
+&lt;a href=&quot;https://www.freedesktop.org/software/systemd/man/latest/systemd-repart.html&quot;&gt;systemd-repart&lt;/a&gt;
+creates disk images during the build process and applies a partition
+scheme during
+boot. &lt;a href=&quot;https://www.freedesktop.org/software/systemd/man/latest/systemd-sysupdate.html&quot;&gt;systemd-sysupdate&lt;/a&gt;
+downloads and applies system updates. They have lots of documentation,
+but I couldn’t find any end-to-end example.&lt;/p&gt;
+
+&lt;p&gt;So let’s build an end-to-end example! We’ll use &lt;a href=&quot;https://nixos.org/&quot;&gt;NixOS&lt;/a&gt;, but the
+high-level setup is not NixOS-specific. The final example lives
+&lt;a href=&quot;https://github.com/blitz/sysupdate-playground&quot;&gt;here&lt;/a&gt;. For the version
+referenced in this blog post, check out the &lt;a href=&quot;https://github.com/blitz/sysupdate-playground/tree/blog-post&quot;&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;blog-post&lt;/code&gt;
+tag&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h2 id=&quot;partition-layout-with-systemd-repart&quot;&gt;Partition Layout with systemd-repart&lt;/h2&gt;
+
+&lt;p&gt;Starting from our goals above, we want the following partition
+layout. We’ll do this with systemd-repart offline at build time. The
+sizes are somewhat arbitrary. I’m aiming for the low end here.&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt;Name&lt;/th&gt;
+      &lt;th&gt;Size&lt;/th&gt;
+      &lt;th&gt;Mount Point&lt;/th&gt;
+      &lt;th&gt;Description&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;ESP&lt;/td&gt;
+      &lt;td&gt;256 MiB&lt;/td&gt;
+      &lt;td&gt;/boot&lt;/td&gt;
+      &lt;td&gt;The boot partition that holds the boot loader and Linux boot files.&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;System A&lt;/td&gt;
+      &lt;td&gt;1 GiB&lt;/td&gt;
+      &lt;td&gt;/nix/store&lt;/td&gt;
+      &lt;td&gt;The system files.&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;System B&lt;/td&gt;
+      &lt;td&gt;1 GiB&lt;/td&gt;
+      &lt;td&gt;/nix/store&lt;/td&gt;
+      &lt;td&gt;Alternate system files for the other installed version.&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Persistent&lt;/td&gt;
+      &lt;td&gt;&amp;gt;2 GiB&lt;/td&gt;
+      &lt;td&gt;/var&lt;/td&gt;
+      &lt;td&gt;Any files that need to survive reboots.&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;When we build a disk image for the initial installation, the B
+partition can be empty. The persistent &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/var/&lt;/code&gt; partition could be
+created on the fly. However, in this example, we create it at
+build time for simplicity.&lt;/p&gt;
+
+&lt;p&gt;You can see the whole partition configuration in the
+&lt;a href=&quot;https://github.com/blitz/sysupdate-playground/blob/blog-post/modules/partitions.nix&quot;&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;partitions.nix&lt;/code&gt;&lt;/a&gt;
+module in the example. Here’s a shortened version:&lt;/p&gt;
+
+&lt;div class=&quot;language-nix highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nv&quot;&gt;image&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;repart&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;partitions&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;s2&quot;&gt;&quot;esp&quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;c&quot;&gt;# The NixOS repart module let&apos;s us populate partitions easily. Here we install systemd-boot&lt;/span&gt;
+      &lt;span class=&quot;c&quot;&gt;# and the Unified Kernel Image (UKI) of the system.&lt;/span&gt;
+      &lt;span class=&quot;nv&quot;&gt;contents&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;s2&quot;&gt;&quot;/EFI/BOOT/BOOT&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;${&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;lib&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;toUpper&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;efiArch&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;.EFI&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;source&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;
+          &lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;${&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;pkgs&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;systemd&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;/lib/systemd/boot/efi/systemd-boot&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;${&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;efiArch&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;.efi&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+        &lt;span class=&quot;s2&quot;&gt;&quot;/EFI/Linux/&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;${&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;config&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;system&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;boot&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;loader&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;ukiFile&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;source&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;
+          &lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;${&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;config&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;system&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;build&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;uki&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;${&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;config&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;system&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;boot&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;loader&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;ukiFile&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;};&lt;/span&gt;
+      &lt;span class=&quot;nv&quot;&gt;repartConfig&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;nv&quot;&gt;Type&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;esp&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+        &lt;span class=&quot;nv&quot;&gt;Format&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;vfat&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;};&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;};&lt;/span&gt;
+
+    &lt;span class=&quot;s2&quot;&gt;&quot;store&quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;c&quot;&gt;# We drop all Nix store paths that we require into this partition. This includes all binaries,&lt;/span&gt;
+      &lt;span class=&quot;c&quot;&gt;# but also everything to populate /etc.&lt;/span&gt;
+      &lt;span class=&quot;c&quot;&gt;#&lt;/span&gt;
+      &lt;span class=&quot;c&quot;&gt;# This is our System A partition in the table above.&lt;/span&gt;
+      &lt;span class=&quot;nv&quot;&gt;storePaths&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;config&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;system&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;build&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;toplevel&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;];&lt;/span&gt;
+      &lt;span class=&quot;nv&quot;&gt;stripNixStorePrefix&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kc&quot;&gt;true&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+      &lt;span class=&quot;nv&quot;&gt;repartConfig&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;nv&quot;&gt;Type&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;linux-generic&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+        &lt;span class=&quot;nv&quot;&gt;Label&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;store_&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;${&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;config&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;system&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;image&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;version&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+        &lt;span class=&quot;nv&quot;&gt;Format&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;squashfs&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;};&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;};&lt;/span&gt;
+
+    &lt;span class=&quot;c&quot;&gt;# Placeholder partition for the System B partition.&lt;/span&gt;
+    &lt;span class=&quot;s2&quot;&gt;&quot;store-empty&quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;nv&quot;&gt;repartConfig&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;nv&quot;&gt;Type&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;linux-generic&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+        &lt;span class=&quot;nv&quot;&gt;Label&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;_empty&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;};&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;};&lt;/span&gt;
+
+    &lt;span class=&quot;c&quot;&gt;# Persistent storage&lt;/span&gt;
+    &lt;span class=&quot;s2&quot;&gt;&quot;var&quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;nv&quot;&gt;repartConfig&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;nv&quot;&gt;Type&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;var&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+        &lt;span class=&quot;nv&quot;&gt;Format&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;xfs&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+        &lt;span class=&quot;nv&quot;&gt;Label&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;nixos-persistent&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+        &lt;span class=&quot;c&quot;&gt;# Wiping this gives us a clean state.&lt;/span&gt;
+        &lt;span class=&quot;nv&quot;&gt;FactoryReset&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;yes&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;};&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;};&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;};&lt;/span&gt;
+&lt;span class=&quot;err&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;With this configuration, we already get a bootable image. Here we
+build version 17 of our image:&lt;/p&gt;
+
+&lt;div class=&quot;language-console highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;gp&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;nix build .#appliance_17_image
+&lt;span class=&quot;gp&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;ls&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-l&lt;/span&gt; result/
+&lt;span class=&quot;go&quot;&gt;total 1.1G
+-r--r--r-- 2 root root 1.1G Jan  1  1970 disk.qcow2
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;You can then boot this image in Qemu with the provided &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;qemu-efi&lt;/code&gt; script
+available in the development shell:&lt;/p&gt;
+
+&lt;div class=&quot;language-console highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;gp&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;nix develop &lt;span class=&quot;nb&quot;&gt;.&lt;/span&gt;
+&lt;span class=&quot;gp&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;qemu-efi ./result/disk.qcow2
+&lt;span class=&quot;go&quot;&gt;[...]
+&lt;/span&gt;&lt;span class=&quot;gp&quot;&gt;&amp;lt;&amp;lt;&amp;lt; Welcome to ApplianceOS 24.11.20240731.9f918d6 (x86_64) - ttyS0 &amp;gt;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;go&quot;&gt;
+applianceos login: root (automatic login)
+
+&lt;/span&gt;&lt;span class=&quot;gp&quot;&gt;root@applianceos (version 17) $&lt;/span&gt;&lt;span class=&quot;w&quot;&gt;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;So far so good!&lt;/p&gt;
+
+&lt;h2 id=&quot;building-an-update-package&quot;&gt;Building an Update Package&lt;/h2&gt;
+
+&lt;p&gt;Now that we have our bootable image of version 17, we need a way to
+update it to version 18. As stated in the beginning, we do &lt;em&gt;not&lt;/em&gt; want
+to do &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;nixos-rebuild&lt;/code&gt;, because this involves Nix evaluation and
+potentially building code. We don’t want to mutate our system, we want
+to simply replace it with the new version.&lt;/p&gt;
+
+&lt;p&gt;For the update, we need two things:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;A new version of the Nix store,&lt;/li&gt;
+  &lt;li&gt;A new Linux kernel and initrd as &lt;a href=&quot;https://github.com/uapi-group/specifications/blob/main/specs/unified_kernel_image.md&quot;&gt;UKI&lt;/a&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;We already prepared our system for a second copy of the Nix store: We
+have an empty partition for this. We just need a new partition image
+for the Nix store. The &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;image.repart&lt;/code&gt; module can provide individual
+partition images via the following in the NixOS configuration:&lt;/p&gt;
+
+&lt;div class=&quot;language-nix highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nv&quot;&gt;image&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;repart&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;split&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kc&quot;&gt;true&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;We can build the UKI for our new system version via the
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;config.system.build.uki&lt;/code&gt; of an evaluated NixOS configuration:&lt;/p&gt;
+
+&lt;div class=&quot;language-console highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;gp&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;nix build .#nixosConfigurations.appliance_18.config.system.build.uki
+&lt;span class=&quot;gp&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;ls&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-lh&lt;/span&gt; result/
+&lt;span class=&quot;go&quot;&gt;total 43M
+-r--r--r-- 2 root root 43M Jan  1  1970 appliance_18.efi
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;With some minor NixOS magic, we can build our update package:&lt;/p&gt;
+
+&lt;div class=&quot;language-console highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;gp&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;nix build .#appliance_18_update
+&lt;span class=&quot;gp&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;ls&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-lh&lt;/span&gt; result/
+&lt;span class=&quot;go&quot;&gt;total 318M
+-r--r--r-- 2 root root  43M Jan  1  1970 appliance_18.efi.xz
+-r--r--r-- 2 root root 276M Jan  1  1970 store_18.img.xz
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h2 id=&quot;configuring-systemd-sysupdate&quot;&gt;Configuring systemd-sysupdate&lt;/h2&gt;
+
+&lt;p&gt;Ok, we have our update, but now we need to apply it. This is where
+&lt;a href=&quot;https://www.freedesktop.org/software/systemd/man/latest/systemd-sysupdate.html&quot;&gt;systemd-sysupdate&lt;/a&gt;
+comes in. systemd-sysupdate is a tool that scans update
+&lt;em&gt;sources&lt;/em&gt; for new updates and then allows to apply them to &lt;em&gt;targets&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;Sources can be web servers for fetching files via the Internet or
+local directories. Targets can be directories or partitions on the
+local system.&lt;/p&gt;
+
+&lt;p&gt;In our example, we want to:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Place the UKI of an update package into the right directory on the ESP,&lt;/li&gt;
+  &lt;li&gt;Place the new Nix store into an available partition.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;For simplicity, we will tell systemd-sysupdate to look for updates in
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/var/updates&lt;/code&gt;.  You can see the whole systemd-sysupdate
+&lt;a href=&quot;https://www.freedesktop.org/software/systemd/man/latest/sysupdate.d.html&quot;&gt;configuration&lt;/a&gt;
+in the
+&lt;a href=&quot;https://github.com/blitz/sysupdate-playground/blob/blog-post/modules/sysupdate.nix&quot;&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;sysupdate.nix&lt;/code&gt;&lt;/a&gt;
+module in the example. Here’s the shortened version:&lt;/p&gt;
+
+&lt;div class=&quot;language-nix highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nv&quot;&gt;systemd&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;sysupdate&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;nv&quot;&gt;enable&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;kc&quot;&gt;true&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+  &lt;span class=&quot;nv&quot;&gt;transfers&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+     &lt;span class=&quot;c&quot;&gt;# This section describes the UKI update procedure.&lt;/span&gt;
+    &lt;span class=&quot;s2&quot;&gt;&quot;10-uki&quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;nv&quot;&gt;Source&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;c&quot;&gt;# The name pattern of compressed UKI files to download. @v is&lt;/span&gt;
+        &lt;span class=&quot;c&quot;&gt;# a place holder for the version number.&lt;/span&gt;
+        &lt;span class=&quot;nv&quot;&gt;MatchPattern&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+          &lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;${&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;config&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;boot&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;uki&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;_@v.efi.xz&quot;&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;];&lt;/span&gt;
+
+        &lt;span class=&quot;c&quot;&gt;# We could fetch updates from the network as well:&lt;/span&gt;
+        &lt;span class=&quot;c&quot;&gt;#&lt;/span&gt;
+        &lt;span class=&quot;c&quot;&gt;# Path = &quot;https://download.example.com/&quot;;&lt;/span&gt;
+        &lt;span class=&quot;c&quot;&gt;# Type = &quot;url-file&quot;;&lt;/span&gt;
+        &lt;span class=&quot;nv&quot;&gt;Path&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;/var/updates/&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+        &lt;span class=&quot;nv&quot;&gt;Type&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;regular-file&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;};&lt;/span&gt;
+
+      &lt;span class=&quot;c&quot;&gt;# We want to place the uncompressed UKI into the ESP.&lt;/span&gt;
+      &lt;span class=&quot;nv&quot;&gt;Target&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;nv&quot;&gt;MatchPattern&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+          &lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;${&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;config&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;boot&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;uki&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;}&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;_@v.efi&quot;&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;];&lt;/span&gt;
+
+        &lt;span class=&quot;nv&quot;&gt;Path&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;/EFI/Linux&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+        &lt;span class=&quot;nv&quot;&gt;PathRelativeTo&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;boot&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+        &lt;span class=&quot;nv&quot;&gt;Type&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;regular-file&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;};&lt;/span&gt;
+
+      &lt;span class=&quot;c&quot;&gt;# Prevent the currently booted version from being garbage&lt;/span&gt;
+      &lt;span class=&quot;c&quot;&gt;# collected by systemd-sysupdate.&lt;/span&gt;
+      &lt;span class=&quot;nv&quot;&gt;Transfer&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;nv&quot;&gt;ProtectVersion&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;%A&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;};&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;};&lt;/span&gt;
+
+    &lt;span class=&quot;c&quot;&gt;# This section describes the Nix store update procedure.&lt;/span&gt;
+    &lt;span class=&quot;s2&quot;&gt;&quot;20-store&quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+      &lt;span class=&quot;nv&quot;&gt;Source&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;nv&quot;&gt;MatchPattern&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;
+          &lt;span class=&quot;s2&quot;&gt;&quot;store_@v.img.xz&quot;&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;];&lt;/span&gt;
+
+        &lt;span class=&quot;nv&quot;&gt;Path&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;/var/updates/&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+        &lt;span class=&quot;nv&quot;&gt;Type&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;regular-file&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;};&lt;/span&gt;
+
+      &lt;span class=&quot;nv&quot;&gt;Target&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;c&quot;&gt;# The target is an available partition on this device.&lt;/span&gt;
+        &lt;span class=&quot;c&quot;&gt;# This can in some cases be auto-detected.&lt;/span&gt;
+        &lt;span class=&quot;nv&quot;&gt;Path&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;/dev/sda&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+        &lt;span class=&quot;c&quot;&gt;# The target partition will have this label.&lt;/span&gt;
+        &lt;span class=&quot;nv&quot;&gt;MatchPattern&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;store_@v&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+        &lt;span class=&quot;nv&quot;&gt;Type&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;partition&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;};&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;};&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;};&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;};&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h2 id=&quot;applying-the-update&quot;&gt;Applying the Update&lt;/h2&gt;
+
+&lt;p&gt;To apply the update, boot the system image as before:&lt;/p&gt;
+
+&lt;div class=&quot;language-console highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;gp&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;nix build .&lt;span class=&quot;se&quot;&gt;\#&lt;/span&gt;appliance_17_image
+&lt;span class=&quot;gp&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;qemu-efi ./result/disk.qcow2
+&lt;span class=&quot;go&quot;&gt;[ ... ]
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;We continue in the shell in the VM. For demo convenience, the example
+already has the update package for version 18 in &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/var/update&lt;/code&gt;:&lt;/p&gt;
+
+&lt;div class=&quot;language-console highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;gp&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;ls&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-lh&lt;/span&gt; /var/updates/
+&lt;span class=&quot;go&quot;&gt;total 324M
+-r--r--r-- 1 root root  43M Aug 11 15:47 appliance_18.efi.xz
+-r--r--r-- 1 root root 276M Aug 11 15:47 store_18.img.xz
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;systemd-sysupdate finds version 18 as an update candidate:&lt;/p&gt;
+
+&lt;div class=&quot;language-console highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;gp&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;systemd-sysupdate
+&lt;span class=&quot;go&quot;&gt;  VERSION INSTALLED AVAILABLE ASSESSMENT
+↻ 18                    ✓     candidate
+● 17          ✓               current
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;The update to version 18 can then be applied:&lt;/p&gt;
+
+&lt;div class=&quot;language-console highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;gp&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;systemd-sysupdate update
+&lt;span class=&quot;go&quot;&gt;Selected update &apos;18&apos; for install.
+Making room for 1 updates…
+Removed no instances.
+⤵️ Acquiring /var/updates/appliance_18.efi.xz → /boot/EFI/Linux/appliance_18.efi...
+&lt;/span&gt;&lt;span class=&quot;gp&quot;&gt;Importing &apos;/var/updates/appliance_18.efi.xz&apos;, saving as &apos;/boot/EFI/Linux/.#&lt;/span&gt;sysupdateappliance_18.efifce0abb2fdba79a5&lt;span class=&quot;s1&quot;&gt;&apos;.
+&lt;/span&gt;&lt;span class=&quot;go&quot;&gt;[...]
+Successfully acquired &apos;/var/updates/appliance_18.efi.xz&apos;.
+⤵️ Acquiring /var/updates/store_18.img.xz → /proc/self/fd/3p2...
+Importing &apos;/var/updates/store_18.img.xz&apos;, saving at offset 269484032 in &apos;/dev/sda&apos;.
+[...]
+Successfully acquired &apos;/var/updates/store_18.img.xz&apos;.
+Successfully installed &apos;/var/updates/appliance_18.efi.xz&apos; (regular-file) as &apos;/boot/EFI/Linux/appliance_18.efi&apos; (regular-file).
+Successfully installed &apos;/var/updates/store_18.img.xz&apos; (regular-file) as &apos;/proc/self/fd/3p2&apos; (partition).
+✨ Successfully installed update &apos;18&apos;.
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Now you can reboot the VM. Once the system is back up, you can remove
+the last version. This would also happen automatically when the next
+version is installed:&lt;/p&gt;
+
+&lt;div class=&quot;language-console highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;go&quot;&gt;% systemd-sysupdate vacuum -m 1
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h2 id=&quot;final-words&quot;&gt;Final Words&lt;/h2&gt;
+
+&lt;p&gt;This was a whirlwind tour through systemd-repart and
+systemd-sysupdate that hopefully gave you an overview how they work. I invite you to explore the
+&lt;a href=&quot;https://github.com/blitz/sysupdate-playground&quot;&gt;example&lt;/a&gt;!&lt;/p&gt;
+
+&lt;p&gt;There are lots of pieces missing in the example that I would like to add:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Growing partitions on boot,&lt;/li&gt;
+  &lt;li&gt;Automatically creating &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/var&lt;/code&gt; on first boot,&lt;/li&gt;
+  &lt;li&gt;Automatic rollback on boot failures,&lt;/li&gt;
+  &lt;li&gt;Secure Boot,&lt;/li&gt;
+  &lt;li&gt;TPM-based disk encryption,&lt;/li&gt;
+  &lt;li&gt;…&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;If you feel like experimenting with any of these features, please open
+a PR or drop me a message. I would love to see what you did!&lt;/p&gt;
+
+&lt;p&gt;PS. If you need consulting, reach out to &lt;a href=&quot;https://cyberus-technology.de/en/contact&quot;&gt;Cyberus Technology&lt;/a&gt;.&lt;/p&gt;
+</description>
+        <pubDate>Wed, 28 Aug 2024 00:00:00 +0000</pubDate>
+        <link>https://x86.lol/generic/2024/08/28/systemd-sysupdate.html</link>
+        <guid isPermaLink="true">https://x86.lol/generic/2024/08/28/systemd-sysupdate.html</guid>
+        
+        
+        <category>generic</category>
+        
+      </item>
+    
+      <item>
+        <title>Confidential Computing: Complexity vs Security</title>
+        <description>&lt;p&gt;This blog post is a continuation of my &lt;a href=&quot;/generic/2023/02/07/intel-tdx.html&quot;&gt;previous&lt;/a&gt; &lt;a href=&quot;/generic/2023/06/28/intel-tdx-2.html&quot;&gt;posts&lt;/a&gt; about &lt;a href=&quot;https://en.wikipedia.org/wiki/Confidential_computing&quot;&gt;Confidential
+Computing&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h2 id=&quot;tldr&quot;&gt;tl;dr&lt;/h2&gt;
+
+&lt;p&gt;Complexity frequently leads to security issues. Adding support for a
+bunch of confidential computing technologies to KVM increases its
+complexity and thus softens its security stance.&lt;/p&gt;
+
+&lt;h2 id=&quot;longer-version&quot;&gt;Longer Version&lt;/h2&gt;
+
+&lt;p&gt;While scrolling through &lt;a href=&quot;https://linux-kvm.org/&quot;&gt;KVM&lt;/a&gt; security
+vulnerabilities, it’s hard not to notice an uptick of vulnerabilities
+related to confidential computing, specifically &lt;a href=&quot;https://www.qemu.org/docs/master/system/i386/amd-memory-encryption.html&quot;&gt;AMD
+SEV&lt;/a&gt;. &lt;a href=&quot;https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2021-4093&quot;&gt;Here&lt;/a&gt;
+&lt;a href=&quot;https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2022-0171&quot;&gt;are&lt;/a&gt;
+&lt;a href=&quot;https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2023-4155&quot;&gt;some&lt;/a&gt;
+&lt;a href=&quot;https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2024-35791&quot;&gt;examples&lt;/a&gt;. These
+vulnerabilities typically don’t break the security promises of the
+confidential VM, but open up issues on the host.&lt;/p&gt;
+
+&lt;p&gt;I have been wondering whether the enabling of confidential computing
+features in KVM inadvertently lowers the security of KVM as a
+whole. The confidential guest may enjoy the benefits of &lt;a href=&quot;/generic/2023/06/28/intel-tdx-2.html&quot;&gt;some
+protection&lt;/a&gt; against malicious
+hypervisors, but the hypervisor has a harder time enforcing isolation
+on the whole system.&lt;/p&gt;
+
+&lt;p&gt;KVM on x86 is already a beast through no fault of its maintainers. x86
+is notoriously hard to virtualize because it is an architecture with
+lots of legacy. The complexity of KVM reflects that. Also, KVM has
+often been the first public implementation of many virtualization
+features and thus can’t enjoy the benefit of hindsight. It also has
+many users, so rectifying any unfortunate API design or implementation
+choice is tough because someone’s problem is another person’s
+feature.&lt;/p&gt;
+
+&lt;p&gt;Given the complexities, our open-source virtualization stack would
+benefit from some big corporation money and brains to simplify, harden
+its security, and improve its trustworthiness. But as the incentive
+structures are, CPU vendors instead have started pouring money into
+developing mutually incompatible confidential computing solutions.&lt;/p&gt;
+
+&lt;p&gt;AMD, Intel, and ARM designed their confidential computing projects so
+they can be bolted onto the existing software stack. As such, each of
+these technologies adds thousands of lines of code to KVM and further increases the code base’s complexity. Due to the
+increased complexity, we now unsurprisingly see security issues in the
+modified code.&lt;/p&gt;
+
+&lt;p&gt;So the technology that is supposed to help to increase trust in
+virtualization has ultimately weakened the security of virtualization
+for many users. Isn’t this ironic?&lt;/p&gt;
+</description>
+        <pubDate>Sun, 07 Jul 2024 00:00:00 +0000</pubDate>
+        <link>https://x86.lol/generic/2024/07/07/confidential-complexity.html</link>
+        <guid isPermaLink="true">https://x86.lol/generic/2024/07/07/confidential-complexity.html</guid>
+        
+        
+        <category>generic</category>
+        
+      </item>
+    
+      <item>
+        <title>RISC-V: The (Almost) Unused Bit in JALR</title>
+        <description>&lt;p&gt;In the &lt;a href=&quot;https://en.wikipedia.org/wiki/RISC-V&quot;&gt;RISC-V&lt;/a&gt; architecture,
+you have excellent support for embedding information into code by
+choosing compressed or uncompressed instructions. While being a
+typical
+&lt;a href=&quot;https://en.wikipedia.org/wiki/Reduced_instruction_set_computer&quot;&gt;RISC&lt;/a&gt;
+with fixed 32-bit instruction length, RISC-V allows certain common
+instructions to be encoded as &lt;em&gt;compressed&lt;/em&gt; 16-bit instructions to
+improve code density. Each compressed instruction has a functionally
+identical 32-bit cousin.&lt;/p&gt;
+
+&lt;p&gt;If you are interested in how that is used to embed information into a
+binary, you can check out my &lt;a href=&quot;/2019/02/12/steganography.html&quot;&gt;x86 instruction set steganography&lt;/a&gt; post from a couple of years ago,
+which uses a similar property of the x86 instruction set to do exactly
+this.&lt;/p&gt;
+
+&lt;p&gt;What I found more interesting, when reading the &lt;a href=&quot;https://riscv.org/wp-content/uploads/2017/05/riscv-spec-v2.2.pdf&quot;&gt;RISC-V User-Level
+ISA&lt;/a&gt;
+specification, is that the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;jalr&lt;/code&gt; (“Jump and Link Register”)
+instruction has an essentially unused bit that can be used to embed
+information as well.&lt;/p&gt;
+
+&lt;p&gt;To see why this bit is essentially unused, consider how &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;jalr&lt;/code&gt;
+works. &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;jalr&lt;/code&gt; computes its jump target by adding an immediate value to
+a source register. This immediate is unlike other jump immediates
+&lt;em&gt;not&lt;/em&gt; encoded as multiples of 2. The specification says that the
+lowest bit of the sum is ignored and treated as zero. Since the source
+register is practically always aligned and its lowest bit is zero,
+this means that the lowest bit of the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;jalr&lt;/code&gt; is ignored in practice.&lt;/p&gt;
+
+&lt;p&gt;That there is a unused bit in the instruction encoding is unusual.
+Typically, all the available space is used to encode bigger
+immediates. But for the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;jalr&lt;/code&gt; instruction the RISC-V designers
+decided to go for simplicity. Here is an excerpt from the
+&lt;a href=&quot;https://riscv.org/wp-content/uploads/2017/05/riscv-spec-v2.2.pdf&quot;&gt;spec&lt;/a&gt;
+(page 16):&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;Note that the JALR instruction does not treat the 12-bit immediate as multiples of 2 bytes,
+unlike the conditional branch instructions. This avoids one more immediate format in hardware.
+In practice, most uses of JALR will have either a zero immediate or be paired with a LUI or
+AUIPC, so the slight reduction in range is not signiﬁcant.&lt;/p&gt;
+
+  &lt;p&gt;The JALR instruction ignores the lowest bit of the calculated target address. This both
+simpliﬁes the hardware slightly and allows the low bit of function pointers to be used to store
+auxiliary information. Although there is potentially a slight loss of error checking in this case,
+in practice jumps to an incorrect instruction address will usually quickly raise an exception.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;The nice thing about this unused bit is that we can use it to embed
+information without changing the size of the instruction itself. This
+makes it more useful than selecting different-length encodings of the
+same instruction, because we can do so &lt;em&gt;after&lt;/em&gt; compiling an
+application. Choosing different instruction sizes has to be done at
+compilation time, because it will shift around function addresses and
+jump targets.&lt;/p&gt;
+
+&lt;p&gt;Of course, this only works as long as no one is actually storing
+information in the low bit of function pointers. But this is rare in
+practice.&lt;/p&gt;
+
+&lt;p&gt;So how much information can we embed using this method? Let’s look at
+GCC as a medium-sized application. Let’s see how much we have to work
+with for a RISC-V 32-bit GCC:&lt;/p&gt;
+
+&lt;div class=&quot;language-console highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;gp&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;readelf &lt;span class=&quot;nt&quot;&gt;-l&lt;/span&gt; gcc
+&lt;span class=&quot;go&quot;&gt;
+Elf file type is EXEC (Executable file)
+Entry point 0x292bc
+There are 11 program headers, starting at offset 52
+
+Program Headers:
+  Type           Offset   VirtAddr   PhysAddr   FileSiz MemSiz  Flg Align
+  PHDR           0x000034 0x00010034 0x00010034 0x00160 0x00160 R   0x4
+  INTERP         0x000194 0x00010194 0x00010194 0x00075 0x00075 R   0x1
+  RISCV_ATTRIBUT 0x1948c6 0x00000000 0x00000000 0x00057 0x00000 R   0x1
+&lt;/span&gt;&lt;span class=&quot;gp&quot;&gt;&amp;gt;&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;LOAD           0x000000 0x00010000 0x00010000 0x18e47c 0x18e47c R E 0x1000 &amp;lt;
+&lt;span class=&quot;go&quot;&gt;  LOAD           0x18eb38 0x0019fb38 0x0019fb38 0x05d7c 0x0a290 RW  0x1000
+  DYNAMIC        0x192ee8 0x001a3ee8 0x001a3ee8 0x00118 0x00118 RW  0x4
+  NOTE           0x00020c 0x0001020c 0x0001020c 0x00020 0x00020 R   0x4
+  TLS            0x18eb38 0x0019fb38 0x0019fb38 0x00000 0x00008 R   0x4
+  GNU_EH_FRAME   0x1566d4 0x001666d4 0x001666d4 0x07b34 0x07b34 R   0x4
+  GNU_STACK      0x000000 0x00000000 0x00000000 0x00000 0x00000 RW  0x10
+  GNU_RELRO      0x18eb38 0x0019fb38 0x0019fb38 0x044c8 0x044c8 R   0x1
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;There are &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;0x18e47c&lt;/code&gt; bytes of executable code (the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;LOAD&lt;/code&gt; segment with
+&lt;strong&gt;E&lt;/strong&gt;xecute permission). So there are roughly 1.5 MiB of code to work
+with. Let’s see how much &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;jalr&lt;/code&gt; instructions we have:&lt;/p&gt;
+
+&lt;div class=&quot;language-console highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;gp&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;objdump &lt;span class=&quot;nt&quot;&gt;-Mno-aliases&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-d&lt;/span&gt; gcc | &lt;span class=&quot;nb&quot;&gt;grep&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-E&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;[^.]jalr&quot;&lt;/span&gt; | &lt;span class=&quot;nb&quot;&gt;wc&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-l&lt;/span&gt;
+&lt;span class=&quot;go&quot;&gt;190
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;There are 190 &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;jalr&lt;/code&gt; instructions in these 1.5 MiB of code. That means
+we can embed 190 bits using this method into GCC. Not a lot. It turns
+out that &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;jalr&lt;/code&gt; almost exclusively used for &lt;a href=&quot;https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-elf.adoc&quot;&gt;function entry stubs in
+the
+PLT&lt;/a&gt;. So
+there is also no hope of orders of magnitude more in larger binaries.&lt;/p&gt;
+
+&lt;p&gt;If we use the obvious method of switching between compressed
+instructions and normal instructions in RISC-V we have much more to
+work with. Let’s count the compressed instructions in the GCC binary:&lt;/p&gt;
+
+&lt;div class=&quot;language-console highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;gp&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;w&quot;&gt; &lt;/span&gt;objdump &lt;span class=&quot;nt&quot;&gt;-Mno-aliases&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-d&lt;/span&gt; gcc | &lt;span class=&quot;nb&quot;&gt;grep&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-F&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;c.&quot;&lt;/span&gt; | &lt;span class=&quot;nb&quot;&gt;wc&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-l&lt;/span&gt;
+&lt;span class=&quot;go&quot;&gt;186412
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;That make makes 186412 bits of information (around 23 KiB). Much more
+useful!&lt;/p&gt;
+
+&lt;p&gt;Finally, why would you want to embed information into binaries? I can
+only think of contrived examples, but they are fun. Consider an
+air-gapped build system that produces signed binaries. You can only
+put source code in on one side and you get a signed binary out on the
+other side. An attacker that manages to exploit this system can
+covertly smuggle the signing key out by embedding it into the signed
+binaries itself!&lt;/p&gt;
+
+&lt;p&gt;Maybe it is time to insist on &lt;a href=&quot;https://reproducible-builds.org/&quot;&gt;reproducible
+builds&lt;/a&gt; instead of air-gapped build
+systems. 😼&lt;/p&gt;
+
+</description>
+        <pubDate>Wed, 20 Dec 2023 00:00:00 +0000</pubDate>
+        <link>https://x86.lol/2023/12/20/risc-steganography.html</link>
+        <guid isPermaLink="true">https://x86.lol/2023/12/20/risc-steganography.html</guid>
+        
+        
+      </item>
+    
+      <item>
+        <title>Split Lock Detection VM Hangs</title>
+        <description>&lt;p&gt;Recently, I’ve noticed strange hangs of KVM VMs on a custom VMM. As it
+fits the topic of this blog, I thought I make the issue more
+googleable. Until we dive into the issue, we have to set the scene a
+bit.&lt;/p&gt;
+
+&lt;h2 id=&quot;the-scene&quot;&gt;The Scene&lt;/h2&gt;
+
+&lt;p&gt;Consider that we want to run a KVM vCPU on Linux, but we want it to
+unconditionally exit after 1ms regardless of what the guest does. To
+achieve this, we can create a &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;CLOCK_MONOTONIC&lt;/code&gt; timer with
+&lt;a href=&quot;https://man7.org/linux/man-pages/man2/timer_create.2.html&quot;&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;timer_create&lt;/code&gt;&lt;/a&gt;
+that sends a signal to the thread that runs the vCPU (via
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;SIGEV_THREAD_ID&lt;/code&gt;). We choose &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;SIGUSR1&lt;/code&gt;, but other signals work as
+well.&lt;/p&gt;
+
+&lt;p&gt;We have to make sure that we do not receive the signal when the vCPU
+does not execute. This is important, because then the signal will not
+fulfill its goal of kicking the vCPU out of guest execution. For that,
+we &lt;em&gt;mask&lt;/em&gt; &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;SIGUSR1&lt;/code&gt; with
+&lt;a href=&quot;https://man7.org/linux/man-pages/man3/pthread_sigmask.3.html&quot;&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;pthread_sigmask&lt;/code&gt;&lt;/a&gt;
+in the host thread and &lt;em&gt;unmask&lt;/em&gt; it for the vCPU via
+&lt;a href=&quot;https://www.kernel.org/doc/html/v6.6/virt/kvm/api.html#kvm-set-signal-mask&quot;&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;KVM_SET_SIGNAL_MASK&lt;/code&gt;&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;This setup works beautifully and in essence emulates the VMX
+preemption timer&lt;sup id=&quot;fnref:preemptiontimer&quot; role=&quot;doc-noteref&quot;&gt;&lt;a href=&quot;#fn:preemptiontimer&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot;&gt;1&lt;/a&gt;&lt;/sup&gt;. There is only one wart at this
+point. When
+&lt;a href=&quot;https://www.kernel.org/doc/html/v6.6/virt/kvm/api.html#kvm-run&quot;&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;KVM_RUN&lt;/code&gt;&lt;/a&gt;
+returns &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;EINTR&lt;/code&gt;, because the timer signal was pending, we need to
+“consume” the signal or the next &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;KVM_RUN&lt;/code&gt; will immediately exit
+again. We can do this with
+&lt;a href=&quot;https://man7.org/linux/man-pages/man3/sigtimedwait.3p.html&quot;&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;sigtimedwait&lt;/code&gt;&lt;/a&gt;
+with a zero timeout.&lt;/p&gt;
+
+&lt;h2 id=&quot;weird-vm-hangs&quot;&gt;Weird VM Hangs&lt;/h2&gt;
+
+&lt;p&gt;When I used this scheme on my Intel Tiger Lake laptop, I noticed
+strange hangs in VMs. The VM would sometimes get stuck on one
+instruction. The weird thing was that the vCPU could still receive and
+&lt;em&gt;handle&lt;/em&gt; interrupts, but this one harmless looking instruction would
+never complete. The effect was that some Linux kernel threads would
+just get stuck while others continue to run.&lt;/p&gt;
+
+&lt;p&gt;The instruction in question was this from the
+&lt;a href=&quot;https://elixir.bootlin.com/linux/v5.4.259/source/arch/x86/include/asm/bitops.h#L60&quot;&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;set_bit&lt;/code&gt;&lt;/a&gt;
+function of my Linux 5.4 guest:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code class=&quot;language-assembly&quot;&gt;ffffffff810238b0 &amp;lt;set_bit&amp;gt;:
+ffffffff810238b0:       f0 48 0f ab 3e          lock bts %rdi,(%rsi)
+ffffffff810238b5:       c3                      ret
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Way too late, I noticed the following warning in the host’s kernel log
+with a matching instruction point:&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;x86/split lock detection: #AC: vmm/61253 took a split_lock trap at address: 0xffffffff810238b0
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://lwn.net/Articles/790464/&quot;&gt;Split lock detection&lt;/a&gt; is an
+anti-DoS feature that can find or kill processes that perform
+misaligned locked memory accesses, because they trigger extremely slow
+paths in the CPU that impact the performance of other cores in the
+system.&lt;/p&gt;
+
+&lt;p&gt;When I checked in more detail, the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;lock bts&lt;/code&gt; was indeed performing a
+misaligned locked memory access, but why would this warning cause a permanent
+hang at this instruction?&lt;/p&gt;
+
+&lt;p&gt;On my laptop running Linux 6.6, split lock detection was in its
+default setting &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;warn&lt;/code&gt;. This is reasonable, because the underlying
+issue is not something you typically care about on a desktop
+system. The
+&lt;a href=&quot;https://www.kernel.org/doc/html/v6.6/admin-guide/kernel-parameters.html?highlight=split_lock_detection&quot;&gt;documentation&lt;/a&gt;
+of the relevant kernel parameter reads as follows:&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;split_lock_detect=
+   [X86] Enable split lock detection or bus lock detection
+
+   When enabled (and if hardware support is present), atomic
+   instructions that access data across cache line
+   boundaries will result in an alignment check exception
+   for split lock detection or a debug exception for
+   bus lock detection.
+
+...
+
+   warn    - the kernel will emit rate-limited warnings
+             about applications triggering the #AC
+             exception or the #DB exception. This mode is
+             the default on CPUs that support split lock
+             detection or bus lock detection. Default
+             behavior is by #AC if both features are
+             enabled in hardware.
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;There were no clues about the hang here either. 🤔&lt;/p&gt;
+
+&lt;h2 id=&quot;going-deeper&quot;&gt;Going Deeper&lt;/h2&gt;
+
+&lt;p&gt;When I checked the &lt;a href=&quot;https://elixir.bootlin.com/linux/v6.6/source/arch/x86/kernel/cpu/intel.c#L1172&quot;&gt;kernel
+function&lt;/a&gt;
+that emits the warning (called via
+&lt;a href=&quot;https://elixir.bootlin.com/linux/v6.6/C/ident/handle_guest_split_lock&quot;&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;handle_guest_split_lock&lt;/code&gt;&lt;/a&gt;),
+the pieces started falling together:&lt;/p&gt;
+
+&lt;div class=&quot;language-c highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;static&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;split_lock_warn&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;unsigned&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;long&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ip&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+	&lt;span class=&quot;k&quot;&gt;struct&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;delayed_work&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;work&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+	&lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;cpu&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+	&lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;!&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;current&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;reported_split_lock&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+		&lt;span class=&quot;n&quot;&gt;pr_warn_ratelimited&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;#AC: %s/%d took a split_lock trap at address: 0x%lx&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\n&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+				    &lt;span class=&quot;n&quot;&gt;current&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;comm&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;current&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pid&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ip&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+	&lt;span class=&quot;n&quot;&gt;current&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;reported_split_lock&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+	&lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sysctl_sld_mitigate&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+		&lt;span class=&quot;cm&quot;&gt;/*
+		 * misery factor #1:
+		 * sleep 10ms before trying to execute split lock.
+		 */&lt;/span&gt;
+		&lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;msleep_interruptible&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+			&lt;span class=&quot;k&quot;&gt;return&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+		&lt;span class=&quot;cm&quot;&gt;/*
+		 * Misery factor #2:
+		 * only allow one buslocked disabled core at a time.
+		 */&lt;/span&gt;
+		&lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;down_interruptible&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;buslock_sem&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;EINTR&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+			&lt;span class=&quot;k&quot;&gt;return&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+		&lt;span class=&quot;n&quot;&gt;work&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sl_reenable_unlock&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;else&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+		&lt;span class=&quot;n&quot;&gt;work&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sl_reenable&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+	&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+	&lt;span class=&quot;n&quot;&gt;cpu&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;get_cpu&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;();&lt;/span&gt;
+	&lt;span class=&quot;n&quot;&gt;schedule_delayed_work_on&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;cpu&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;work&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+
+	&lt;span class=&quot;cm&quot;&gt;/* Disable split lock detection on this CPU to make progress */&lt;/span&gt;
+	&lt;span class=&quot;n&quot;&gt;sld_update_msr&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;false&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+	&lt;span class=&quot;n&quot;&gt;put_cpu&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;();&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;When the host detects a split lock, it will try to punish the
+offending thread by introducing a 10ms delay. But recall that our vCPU
+has a 1ms timer pending!&lt;/p&gt;
+
+&lt;p&gt;The situation is thus the following:&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;The VMM programs a 1ms timer and starts guest execution with &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;KVM_RUN&lt;/code&gt;.&lt;/li&gt;
+  &lt;li&gt;The guest executes a misaligned &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;lock bts&lt;/code&gt; and exits with an &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;#AC&lt;/code&gt; exception.&lt;/li&gt;
+  &lt;li&gt;The host Linux kernel sleeps for 10ms to punish this behavior.&lt;/li&gt;
+  &lt;li&gt;The sleep is interrupted and &lt;strong&gt;the function immediately returns&lt;/strong&gt;
+with split lock detection still enabled.&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;At this point, the VMM sees that 10ms has passed and processes its
+timeout events. It programs a new timeout and we have the same
+sequence of events again.&lt;/p&gt;
+
+&lt;p&gt;I have created a minimal example of this issue
+&lt;a href=&quot;https://github.com/blitz/kvm-timer-demo&quot;&gt;here&lt;/a&gt;. The &lt;a href=&quot;https://github.com/blitz/kvm-timer-demo/blob/master/guest.asm&quot;&gt;guest
+code&lt;/a&gt;
+just counts how many times it can can execute the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;lock bts&lt;/code&gt;
+instruction.&lt;/p&gt;
+
+&lt;p&gt;When you execute this test program once with &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;split_lock_detect=warn&lt;/code&gt;
+and once with &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;split_lock_detect=off&lt;/code&gt;, you get the following data:&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/2023-11-split-lock.png&quot; alt=&quot;&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;The plot shows number of loops that the guest finished on the vertical
+axis and the pending timeout in ms on the horizontal axis.&lt;/p&gt;
+
+&lt;p&gt;You can clearly see that for timeouts below 10ms, this (artificial)
+guest makes no progress at all when split lock detection is enabled!
+On the other hand, when split lock detection is disabled, the guest
+makes roughly as much progress as we give it time.&lt;/p&gt;
+
+&lt;h2 id=&quot;workarounds&quot;&gt;Workarounds&lt;/h2&gt;
+
+&lt;p&gt;As I already mentioned, the easiest workaround is to turn split lock
+detection off via &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;split_lock_detect=off&lt;/code&gt;. This is safe unless you run
+a public cloud. Alternatively, the punishment can be disabled by
+writing &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;0&lt;/code&gt; into &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;/proc/sys/kernel/split_lock_mitigate&lt;/code&gt;.&lt;/p&gt;
+
+&lt;h2 id=&quot;a-bug&quot;&gt;A Bug?&lt;/h2&gt;
+
+&lt;p&gt;The &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;split_lock_warn&lt;/code&gt; function is clearly written to allow the
+offender to make some progress. But in the situation where
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;msleep_interruptible&lt;/code&gt; is actually interrupted, this is not the case
+anymore. It looks like a bug to me.&lt;/p&gt;
+
+&lt;p&gt;It’s a difficult question what the correct behavior should be here. If
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;msleep_interruptible&lt;/code&gt; managed to sleep at least a bit (i.e. some
+punishment was dealt), we should still go into the lower part of the
+function that disables split lock detection and allow for forward
+progress. This may make it possible to circumvent this punishment
+though.&lt;/p&gt;
+
+&lt;div class=&quot;footnotes&quot; role=&quot;doc-endnotes&quot;&gt;
+  &lt;ol&gt;
+    &lt;li id=&quot;fn:preemptiontimer&quot; role=&quot;doc-endnote&quot;&gt;
+      &lt;p&gt;I couldn’t find a good resource to link here. The
+VMX preemption timer is a simple timer that counts down a value in
+the VMCS proportional to the TSC frequency and generates a VM exit
+when it reaches zero. See chapter 24.5.1 “VMX-Preemption Timer” in
+the &lt;a href=&quot;https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html&quot;&gt;Intel
+SDM&lt;/a&gt;. &lt;a href=&quot;#fnref:preemptiontimer&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
+    &lt;/li&gt;
+  &lt;/ol&gt;
+&lt;/div&gt;
+</description>
+        <pubDate>Tue, 07 Nov 2023 00:00:00 +0000</pubDate>
+        <link>https://x86.lol/generic/2023/11/07/split-lock.html</link>
+        <guid isPermaLink="true">https://x86.lol/generic/2023/11/07/split-lock.html</guid>
+        
+        
+        <category>generic</category>
+        
+      </item>
+    
+      <item>
+        <title>Intel TDX Doesn&apos;t Protect You from the Cloud</title>
+        <description>&lt;p&gt;This post is a continuation of my &lt;a href=&quot;/generic/2023/02/07/intel-tdx.html&quot;&gt;previous post about Intel TDX&lt;/a&gt;. It’s
+worth a read before reading this post. As before, I’m not going to
+introduce TDX itself. If you need a refresher, Intel has &lt;a href=&quot;(https://cdrdv2.intel.com/v1/dl/getContent/690419)&quot;&gt;good overview
+material&lt;/a&gt; available.&lt;/p&gt;
+
+&lt;h2 id=&quot;tldr&quot;&gt;tl;dr&lt;/h2&gt;
+
+&lt;p&gt;While Intel TDX does make some attacks by the cloud vendor harder, you
+still have to trust the cloud vendor unless you go to extreme
+lengths. We need to build trustworthy virtualization stacks instead of
+hoping for the silver bullet from CPU vendors.&lt;/p&gt;
+
+&lt;h2 id=&quot;longer-version&quot;&gt;Longer Version&lt;/h2&gt;
+
+&lt;p&gt;Let’s take Intel TDX’s promises at face value. When everything goes
+well, TDX provides CPU state and memory integrity. This is useful
+because it prevents trivial attacks on VMs from a compromised
+hypervisor. The hypervisor cannot read secrets directly from memory or
+inject code.&lt;/p&gt;
+
+&lt;p&gt;The problem is that in the TDX trust model, the virtual machine
+monitor (think Qemu) is not trusted. Yet it emulates all virtual
+devices. This means all devices are potential machiavellian devils
+wanting to screw the kernel in the trusted VM. Having completely
+untrusted devices opens a large attack surface to driver code written
+in C, rarely considered security critical.&lt;/p&gt;
+
+&lt;p&gt;There is a real-world analogy here. If you are security-minded, you
+want to limit access to the external ports of your laptop. For
+example, &lt;a href=&quot;https://www.youtube.com/watch?v=ZEZIcjhsZEk&quot;&gt;malicious USB
+devices&lt;/a&gt; can exploit
+vulnerabilities in the operating system’s USB stack to gain code
+execution. But at least internal devices without exposed ports are out
+of the attacker’s reach.&lt;/p&gt;
+
+&lt;p&gt;With TDX, the attack surface includes &lt;em&gt;all&lt;/em&gt; device drivers 😭. All devices
+are fair game from the attacker’s perspective. The malicious VMM can
+craft problematic responses from any device, such as the PCI
+Configuration Space or VirtIO.&lt;/p&gt;
+
+&lt;p&gt;So what does this mean? Running a standard OS in a TDX Trusted Domain
+(TD) instead of plain VMs gives little additional security if the
+attacker is the cloud vendor. The attacker will eventually find
+vulnerable device drivers to exploit because device drivers are not
+typically written in a way where they consider the device’s responses
+malicious.&lt;/p&gt;
+
+&lt;p&gt;But what is there to do about this? While you can minimize drivers in
+the VM to the bare minimum or run a custom high-security OS in the VM,
+this takes away the charm of running a stock OS in the trusted VM. You
+could rewrite all drivers and formally verify them. But that won’t
+happen any time soon. In reality, people will just run Ubuntu.&lt;/p&gt;
+
+&lt;p&gt;You could also implement device emulation in the TDX module, but there
+are problems:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;You can’t do it because it’s not open but “shared” source.&lt;/li&gt;
+  &lt;li&gt;Only Intel can sign the module so the CPU accepts it.&lt;/li&gt;
+  &lt;li&gt;It would only increase the attack surface of this monolithic blob that
+you have to trust for the complete security of TDX.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;People assume that with TDX, you don’t have to trust the cloud vendor
+when you run your Ubuntu there. This is clearly false. You cannot
+deploy a standard application into a TDX VM and expect it to be secure
+from the cloud vendor.&lt;/p&gt;
+
+&lt;p&gt;TDX limits exposure to certain classes of attacks. For example, it is
+hard for the on-call engineer with access to a VM host to extract
+secrets from a TDX TD. Yet TDX does not provide protection against an
+entirely malicious cloud vendor that can arbitrarily deploy device
+emulation code.&lt;/p&gt;
+
+&lt;p&gt;But then there is also the burden on the end user. Suppose you don’t
+do remote attestation and bind your secrets to the VM’s configuration
+using Trusted Computing magic. In that case, TDX brings no benefit at
+all. You can’t tell whether your VM runs inside a TDX TD or some
+software emulation of it.&lt;/p&gt;
+
+&lt;p&gt;Not all is lost, though. Check out my previous blog post, which shows
+a way that sidesteps these problems by allowing devices to be
+trustworthy. Ultimately, it comes down to the cloud vendor becoming
+trustworthy and not only trusted. Confidential computing technologies,
+such as Intel TDX, are a puzzle piece. Still, there is no trustworthy
+virtualization without a trustworthy virtualization stack.&lt;/p&gt;
+
+&lt;h2 id=&quot;update-2023-08-06&quot;&gt;Update 2023-08-06&lt;/h2&gt;
+
+&lt;p&gt;The &lt;a href=&quot;https://intel.github.io/ccc-linux-guest-hardening-docs/index.html&quot;&gt;Linux Guest Hardening
+documentation&lt;/a&gt;
+indirectly makes the same point as the blog post above. There are
+multiple fun points in the document, but the main point is this:&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;Every time a driver performs a port IO or MMIO read, access a pci
+config space or reads values from MSRs or CPUIDs, there is a
+possibility for a malicious hypervisor to inject a malformed value.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;Don’t expect to get solid security out of TDX any time soon:&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;While some of the hardening approaches outlined above are still a
+work in progress or left for the future, it provides a solid
+foundation for continuing this work by both the industry and the
+Linux community.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+</description>
+        <pubDate>Wed, 28 Jun 2023 00:00:00 +0000</pubDate>
+        <link>https://x86.lol/generic/2023/06/28/intel-tdx-2.html</link>
+        <guid isPermaLink="true">https://x86.lol/generic/2023/06/28/intel-tdx-2.html</guid>
+        
+        
+        <category>generic</category>
+        
+      </item>
+    
+      <item>
+        <title>The Flawed Design of Intel TDX</title>
+        <description>&lt;p&gt;This post discusses my personal opinion of Intel’s Trust Domain
+Extensions (TDX). This instruction set extension is Intel’s latest
+attempt at implementing a &lt;a href=&quot;https://en.wikipedia.org/wiki/Trusted_execution_environment&quot;&gt;Trusted Execution Environment
+(TEE)&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;This post does not make an attempt at trying to explain TDX. I assume
+that you have a familiarity with Intel TDX at the conceptual
+level. Intel has a &lt;a href=&quot;https://www.intel.com/content/www/us/en/developer/articles/technical/intel-trust-domain-extensions.html&quot;&gt;large set of
+documents&lt;/a&gt;
+about TDX. &lt;a href=&quot;https://cdrdv2.intel.com/v1/dl/getContent/690419&quot;&gt;The introductory
+overview&lt;/a&gt; does a
+good job of getting you started and should be enough background for
+this post. Otherwise, I’m assuming general knowledge about how
+virtualization works.&lt;/p&gt;
+
+&lt;h2 id=&quot;tldr&quot;&gt;tl;dr&lt;/h2&gt;
+
+&lt;p&gt;Instead of increasing the complexity of the hardware, we can have a
+software-only alternative to TDX with the same security properties and
+fewer downsides. We can achieve this using a secure microhypervisor
+that uses existing security features of the CPU, such as
+&lt;a href=&quot;https://en.wikipedia.org/wiki/Trusted_Execution_Technology&quot;&gt;TXT&lt;/a&gt; and
+&lt;a href=&quot;https://www.intel.com/content/www/us/en/developer/articles/news/runtime-encryption-of-memory-with-intel-tme-mk.html&quot;&gt;TME-MK&lt;/a&gt;. This
+approach would also be portable to other CPU architectures.&lt;/p&gt;
+
+&lt;h2 id=&quot;longer-version&quot;&gt;Longer Version&lt;/h2&gt;
+
+&lt;p&gt;Behind the design of TDX there are some unspoken assumptions:&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;Existing hypervisors are beyond repair from a security perspective
+and cannot be trusted.&lt;/li&gt;
+  &lt;li&gt;Intel can write a microhypervisor (the &lt;em&gt;TDX Module&lt;/em&gt;) that is secure.&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;I’m calling the TDX Module a microhypervisor, because it has a large
+overlap with the functionality commonly found in microhypervisors. It
+manages vCPU state and nested page tables, while relying on VMMs
+running in lower privilege levels to do emulation. This is very
+similar to how microhypervisor-based systems work, such as &lt;a href=&quot;http://hypervisor.org/&quot;&gt;this
+one&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Regarding the security of existing hypervisors, there are definitely
+problems. Linux/KVM on x86 has a lot of emulation code&lt;sup id=&quot;fnref:kvmx86&quot; role=&quot;doc-noteref&quot;&gt;&lt;a href=&quot;#fn:kvmx86&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot;&gt;1&lt;/a&gt;&lt;/sup&gt; that
+is directly accessible by a malicious guest, is written in C and runs
+with now guard rails whatsoever. Applying Google’s &lt;a href=&quot;https://chromium.googlesource.com/chromium/src/+/master/docs/security/rule-of-2.md&quot;&gt;Rule of
+2&lt;/a&gt;
+this places the system squarely in the &lt;strong&gt;DOOM!&lt;/strong&gt; category.&lt;/p&gt;
+
+&lt;p&gt;The conclusion that Intel has drawn out of these assumptions is they
+introduce a new CPU mode (SEAM mode) where they place their
+microhypervisor. This microhypervisor comes as an &lt;a href=&quot;https://edk2-docs.gitbook.io/understanding-the-uefi-secure-boot-chain/secure_boot_chain_in_uefi/intel_boot_guard&quot;&gt;Authenticated Code
+Module
+(ACM)&lt;/a&gt;,
+which must be cryptograhically signed by Intel. The existing
+hypervisor then has to use system calls using a new set of
+instructions (&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;SEAMCALL&lt;/code&gt;) to the microhypervisor that is actually in
+charge. The VMs have to use new instructions (&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;TDCALL&lt;/code&gt;) to interact
+with the outside as well.&lt;/p&gt;
+
+&lt;h3 id=&quot;tdx-downsides&quot;&gt;TDX Downsides&lt;/h3&gt;
+
+&lt;p&gt;While this design has more hope of adoption than &lt;a href=&quot;/generic/2021/11/10/intel-security-tech.html&quot;&gt;SGX&lt;/a&gt;, the design comes with many
+downsides.&lt;/p&gt;
+
+&lt;p&gt;TDX increases hardware complexity. While adding instructions is not
+helping, adding a new CPU &lt;em&gt;mode&lt;/em&gt; feels an order of magnitude more
+costly. Intel needs to make sure that everything the CPU already
+supports works correctly in this new mode. How well Intel can cope
+with hardware complexity can be seen with Spectre/Meltdown or any
+errata sheet.&lt;/p&gt;
+
+&lt;p&gt;TDX locks out any other provider of the microhypervisor in charge of
+the system by requiring the TDX module to come with an Intel
+signature. Everything points to Intel never signing someone else’s
+code. Especially if you are not a hyperscaler, there is really nothing
+to hope for here.&lt;/p&gt;
+
+&lt;p&gt;TDX gives the end user an extremely poor experience for security
+issues. You are basically at the mercy of Intel. As long as Intel
+doesn’t ship an update of the TDX module, there is nothing you can do
+on your own. Also no one will get advance warning for issues except
+big players.&lt;/p&gt;
+
+&lt;p&gt;On Twitter, &lt;a href=&quot;https://twitter.com/blitzclone/status/1531751195697635330&quot;&gt;I was
+joking&lt;/a&gt;
+that the TDX module is probably written in shoddy C. Whether it’s
+shoddy is anyone’s personal opinion, but it turns out that it &lt;em&gt;is&lt;/em&gt;
+actually written in C. Intel has published &lt;a href=&quot;https://www.intel.com/content/www/us/en/download/738875/738876/intel-trust-domain-extension-intel-tdx-module.html&quot;&gt;its
+source&lt;/a&gt;. Would
+you want the software you base all your security hopes on to be
+written in the &lt;a href=&quot;https://portswigger.net/daily-swig/c-is-least-secure-programming-language-study-claims&quot;&gt;least secure programming
+language&lt;/a&gt;?&lt;/p&gt;
+
+&lt;h3 id=&quot;a-better-way&quot;&gt;A Better Way&lt;/h3&gt;
+
+&lt;p&gt;If you can write a secure microhypervisor (one of the assumptions of
+TDX), there is actually no need to go down the road of TDX. Intel
+already provide all the building blocks of a solution that gives you
+the benefits of TDX with far fewer downsides.&lt;/p&gt;
+
+&lt;p&gt;Boot your secure microhypervisor as a normal &lt;a href=&quot;https://en.wikipedia.org/wiki/Hypervisor#Classification&quot;&gt;baremetal
+hypervisor&lt;/a&gt;. The
+boot process can be secured via Secure Boot. You can perform &lt;a href=&quot;https://en.wikipedia.org/wiki/Trusted_Computing#Remote_attestation&quot;&gt;remote
+attestation&lt;/a&gt;
+as well. For this &lt;a href=&quot;https://en.wikipedia.org/wiki/Trusted_Execution_Technology&quot;&gt;Intel
+TXT&lt;/a&gt; comes
+in handy. The microhypervisor can defend itself at runtime using an
+&lt;a href=&quot;https://en.wikipedia.org/wiki/Input%E2%80%93output_memory_management_unit&quot;&gt;IOMMU&lt;/a&gt;
+and defend VMs using
+&lt;a href=&quot;https://www.intel.com/content/www/us/en/developer/articles/news/runtime-encryption-of-memory-with-intel-tme-mk.html&quot;&gt;TME-MK&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Your legacy hypervisor can then boot as a sort of
+&lt;a href=&quot;https://wiki.xenproject.org/wiki/Dom0&quot;&gt;Dom0&lt;/a&gt; and take ownership of
+the platform hardware. Instead of calling into the TDX module, the
+Dom0 can request services from the secure microhypervisor using
+&lt;a href=&quot;https://www.felixcloutier.com/x86/vmcall&quot;&gt;regular
+hypercalls&lt;/a&gt;. Instead of
+patching untrusted guests to use &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;TDCALL&lt;/code&gt; to call into the TDX module,
+they can use existing facilities as well.&lt;/p&gt;
+
+&lt;p&gt;This design gives you all the upsides of TDX. The secure
+microhypervisor will enforce confidentiality protections to the degree
+that you need them. At the same time, the design eliminates
+practically all downsides of TDX. The update process of the secure
+hypervisor does not involve Intel. If you establish your own chain of
+trust, you can update the hypervisor as you please. Also, Secure Boot
+(with your own keys) and TXT are usable by anyone.&lt;/p&gt;
+
+&lt;p&gt;You are free to implement the secure microhypervisor in any language
+you want. You can write it in
+&lt;a href=&quot;https://en.wikipedia.org/wiki/SPARK_(programming_language)&quot;&gt;Ada/SPARK&lt;/a&gt;
+or Rust for maximum resiliency. &lt;strong&gt;At least not in C.&lt;/strong&gt; You can do
+formal verification. You can do fuzzing. Whatever makes you feel
+comfortable.&lt;/p&gt;
+
+&lt;p&gt;You can move the emulation code (Qemu or your favorite alternative)
+from the Dom0 into host root mode outside of Dom0. The microhypervisor
+can run it in a sandbox with only clearly defined access to the rest
+of the system. This removes the need to patch your guest OS or
+firmware and make it TDX aware, because it will just see a normal
+emulated system. Even less complexity!&lt;/p&gt;
+
+&lt;p&gt;Finally, equivalents of Secure Boot, TXT, TME-MK exist for AMD and
+other architectures. You can have the same architecture everywhere.&lt;/p&gt;
+
+&lt;p&gt;But instead we got TDX. &lt;del&gt;And unfortunately other CPU architectures
+(&lt;a href=&quot;https://fosdem.org/2023/schedule/event/cc_riscv/&quot;&gt;RISC-V&lt;/a&gt;) have
+taken it as an example. This makes me sad.&lt;/del&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;update-2023-06-09&quot;&gt;Update 2023-06-09&lt;/h2&gt;
+
+&lt;p&gt;I misunderstood the FOSDEM talk about the &lt;a href=&quot;https://fosdem.org/2023/schedule/event/cc_riscv/&quot;&gt;RISC-V confidential
+computing&lt;/a&gt;
+efforts. &lt;a href=&quot;https://github.com/rivosinc/salus&quot;&gt;Salus&lt;/a&gt;, the system for
+confidential computing developed by
+&lt;a href=&quot;https://www.rivosinc.com/&quot;&gt;Rivos&lt;/a&gt;, is actually implementing almost
+exactly what I outline above. Check out &lt;a href=&quot;https://github.com/rivosinc/salus#overview---initial-prototype&quot;&gt;this overview in their
+README&lt;/a&gt;. Way
+to go! 🎉&lt;/p&gt;
+&lt;div class=&quot;footnotes&quot; role=&quot;doc-endnotes&quot;&gt;
+  &lt;ol&gt;
+    &lt;li id=&quot;fn:kvmx86&quot; role=&quot;doc-endnote&quot;&gt;
+      &lt;p&gt;KVM on x86 does instruction decoding, instruction emulation
+and some legacy device emulation. While you can opt out of the
+legacy device emulation (&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;kernel-irqchip=split&lt;/code&gt;), there is no way
+to opt out of the kernel’s instruction emulation. Also on all
+platforms you can use VirtIO emulation in the kernel (vhost) and
+open another large attack surface. &lt;a href=&quot;#fnref:kvmx86&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
+    &lt;/li&gt;
+  &lt;/ol&gt;
+&lt;/div&gt;
+</description>
+        <pubDate>Tue, 07 Feb 2023 00:00:00 +0000</pubDate>
+        <link>https://x86.lol/generic/2023/02/07/intel-tdx.html</link>
+        <guid isPermaLink="true">https://x86.lol/generic/2023/02/07/intel-tdx.html</guid>
+        
+        
+        <category>generic</category>
+        
+      </item>
+    
+  </channel>
+</rss>
