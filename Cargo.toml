@@ -5,4 +5,4 @@ edition = "2024"
 
 [dependencies]
 lettre = "0.11.18"
-rss = "2.0.12"
+rss = { version = "2.0.12", features = ["validation"] }
