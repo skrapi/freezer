@@ -1,0 +1,6 @@
+[subscriber]
+name = "Kaladin"
+email = "kaladin@archive.com"
+time_period_hours = 168
+
+[channels]

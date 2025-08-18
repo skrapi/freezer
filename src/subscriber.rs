@@ -10,6 +10,8 @@ pub fn channel_from_file(file: &str) -> Channel {
     channel.validate().expect("Invalid RSS file.");
     channel
 }
+
+#[derive(Debug, PartialEq)]
 pub struct Subscriber {
     name: Option<String>,
     // TODO: Change email to a newtype with validation
@@ -25,6 +27,7 @@ impl Subscriber {
             email,
             name: None,
             channels: HashMap::new(),
+            // One week
             time_period_hours: 168,
         }
     }
@@ -57,6 +60,23 @@ impl Subscriber {
 
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_create_subscriber_from_config_file() {
+        // Arrange & Act
+        let subscriber = Subscriber::from_config_file("test/config.toml");
+
+        // Assert
+        assert_eq!(
+            subscriber,
+            Subscriber {
+                email: "kaladin@archive.com".into(),
+                name: Some("Kaladin".into()),
+                channels: HashMap::new(),
+                time_period_hours: 168
+            }
+        )
+    }
     #[test]
     fn test_add_channel() {
         // Arrange
