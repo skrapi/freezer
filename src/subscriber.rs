@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fs::File, io::BufReader};
 
-use rss::{Channel, validation::Validate};
+use rss::{Channel, Item, validation::Validate};
 
 pub fn channel_from_file(file: &str) -> Channel {
     let file = File::open(file).expect("Failed to open file");
@@ -49,6 +49,10 @@ impl Subscriber {
     pub fn send_new_items_in_time_period(&self) {
         todo!()
     }
+
+    fn collect_all_items_in_time_period(&self) -> Vec<Item> {
+        todo!()
+    }
 }
 
 mod tests {
@@ -67,5 +71,25 @@ mod tests {
             subscriber.channels.into_keys().next().unwrap(),
             channel.link
         )
+    }
+
+    #[test]
+    fn test_get_all_items_in_time_period() {
+        // Arrange
+        let mut subscriber = Subscriber::new("kaladin@archive.com".into());
+        let channel = channel_from_file("tests/feed.xml");
+        subscriber.add(channel.clone());
+        let actual_items = channel.into_items().split_off(1);
+
+        // TODO: Figure out how to declare a static date;
+        // needs to be less than a week after
+        // Sun, 10 Aug 2025 00:00:00 +0000
+        let current_date = todo!();
+
+        // Act
+        let collected_items = subscriber.collect_all_items_in_time_period();
+
+        // Assert
+        assert_eq!(collected_items, actual_items);
     }
 }
