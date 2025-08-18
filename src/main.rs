@@ -4,15 +4,35 @@ use rss::validation::Validate;
 use std::fs::File;
 use std::io::BufReader;
 
+struct Feed {
+    channel: Channel,
+}
+
+impl Feed {
+    pub fn from_file(file: &str) -> Self {
+        let file = File::open(file).expect("Failed to open file");
+        let channel =
+            Channel::read_from(BufReader::new(file)).expect("Failed to read channel from file.");
+
+        channel.validate().expect("Invalid RSS file.");
+        Self { channel }
+    }
+    pub fn from_url(url: &str) -> Self {
+        todo!()
+    }
+
+    pub fn title(&self) -> &str {
+        &self.channel.title
+    }
+}
+
 fn main() {
-    let file = File::open("feed.xml").unwrap();
-    let channel = Channel::read_from(BufReader::new(file)).unwrap();
+    let input_file_str = "feed.xml";
 
-    channel.validate().expect("Invalid RSS file.");
+    let feed = Feed::from_file(input_file_str);
 
-    let output_file = File::create("output.xml").unwrap();
-    channel
-        .write_to(output_file)
-        .expect("Failed to write to output file.");
-    println!("Wrote to output file")
+    println!(
+        "We have a channel with the following title: {}",
+        feed.title()
+    );
 }
