@@ -83,22 +83,19 @@ mod tests {
             }
         )
     }
-    // #[test]
-    // fn test_add_channel() {
-    //     // Arrange
-    //     let mut subscriber = Subscriber::new("kaladin@archive.com".into());
-    //     let channel = channel_from_file("tests/feed.xml");
-    //
-    //     // Act
-    //     subscriber.add(channel.clone());
-    //
-    //     // Assert
-    //     assert_eq!(
-    //         subscriber.channels.into_keys().next().unwrap(),
-    //         channel.link
-    //     )
-    // }
-    //
+    #[test]
+    fn test_add_channel() {
+        // Arrange
+        let mut subscriber = Subscriber::new("kaladin@archive.com".into());
+        let channel = channel_from_file("tests/feed.xml");
+
+        // Act
+        subscriber.add(channel.clone());
+
+        // Assert
+        assert_eq!(subscriber.channels[0], channel.link)
+    }
+
     // #[test]
     // fn test_get_all_items_in_time_period() {
     //     // Arrange
