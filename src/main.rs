@@ -1,16 +1,40 @@
+use clap::{Parser, Subcommand};
 use freezer::subscriber::Subscriber;
 
-/// TODO: Add clap arguments for the following
-/// Actions
-/// subscribe
-/// - email to subscribe (optional with config)
-/// - feed to subscribe to
-/// unsubscribe
-/// - email to unsubscribe (optional with config)
-/// - feed to unsubscribe
-/// send_email
-/// - email to send email to
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Cli {
+    /// Command to perform
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand, Debug)]
+enum Commands {
+    Add {
+        #[arg(short, long)]
+        email: Option<String>,
+
+        #[arg(short, long)]
+        feed: String,
+    },
+    Remove {
+        #[arg(short, long)]
+        email: Option<String>,
+
+        #[arg(short, long)]
+        feed: String,
+    },
+    Publish {
+        #[arg(short, long)]
+        email: Option<String>,
+    },
+}
 
 fn main() {
-    let subscriber = Subscriber::from_config_file("/home/skrapi/.config/freezer/freezer.toml");
+    // let subscriber = Subscriber::from_config_file("/home/skrapi/.config/freezer/freezer.toml");
+
+    let cli = Cli::parse();
+
+    println!("{cli:?}");
 }
