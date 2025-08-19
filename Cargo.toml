@@ -7,3 +7,5 @@ edition = "2024"
 lettre = "0.11.18"
 reqwest = { version = "0.12.23", features = ["blocking"] }
 rss = { version = "2.0.12", features = ["validation"] }
+serde = { version = "1.0.219", features = ["serde_derive"] }
+toml = "0.9.5"
