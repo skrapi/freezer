@@ -40,7 +40,9 @@ enum Commands {
 }
 
 fn main() {
-    // let subscriber = Subscriber::from_config_file("/home/skrapi/.config/freezer/freezer.toml");
+    let subscriber = Subscriber::from_config_file("/home/skrapi/.config/freezer/freezer.toml");
+
+    println!("{subscriber:?}");
 
     let cli = Cli::parse();
 
