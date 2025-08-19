@@ -11,21 +11,29 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
+    /// Subscribe to new feed
     Add {
+        /// Email address of subscriber
         #[arg(short, long)]
         email: Option<String>,
 
+        /// Feed to subscribe to
         #[arg(short, long)]
         feed: String,
     },
+    /// Unsubscribe from feed
     Remove {
+        /// Email address of subscriber
         #[arg(short, long)]
         email: Option<String>,
 
+        /// Feed to unsubscribe from
         #[arg(short, long)]
         feed: String,
     },
+    /// Publish a collection of the latest feed contents
     Publish {
+        /// Email address of subscriber
         #[arg(short, long)]
         email: Option<String>,
     },
