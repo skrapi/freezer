@@ -22,12 +22,8 @@ pub struct Subscriber {
     email: String,
     // TODO: Convert to an actual time period
     time_period_hours: usize,
+    channels: Vec<String>,
 }
-
-// [subscriber]
-// name = "Kaladin"
-// email = "kaladin@archive.com"
-// time_period_hours = 168
 
 #[derive(Debug, Deserialize)]
 struct Configuration {
@@ -41,6 +37,7 @@ impl Subscriber {
             name: None,
             // One week
             time_period_hours: 168,
+            channels: vec![],
         }
     }
     pub fn from_config_file(config_file_path: &str) -> Self {
@@ -50,15 +47,13 @@ impl Subscriber {
         subscriber
     }
 
-    // pub fn add(&mut self, channel: Channel) {
-    //     // TODO: use the returned item, maybe as a warning?
-    //     let _ = self.channels.insert(channel.link.clone(), channel);
-    // }
-    //
-    // pub fn delete(&mut self, channel: Channel) {
-    //     // TODO: use the returned item, maybe as a warning
-    //     let _ = self.channels.remove(&channel.link);
-    // }
+    pub fn add(&mut self, channel: Channel) {
+        self.channels.push(channel.link.clone());
+    }
+
+    pub fn delete(&mut self, channel: Channel) {
+        self.channels.retain_mut(|x| x != &channel.link);
+    }
 
     pub fn send_new_items_in_time_period(&self) {
         todo!()
@@ -83,7 +78,8 @@ mod tests {
             Subscriber {
                 email: "kaladin@archive.com".into(),
                 name: Some("Kaladin".into()),
-                time_period_hours: 168
+                time_period_hours: 168,
+                channels: vec!["https://x86.lol/feed.xml".to_string()]
             }
         )
     }
