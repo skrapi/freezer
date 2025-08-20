@@ -13,20 +13,12 @@ struct Cli {
 enum Commands {
     /// Subscribe to new feed
     Add {
-        /// Email address of subscriber
-        #[arg(short, long)]
-        email: Option<String>,
-
         /// Feed to subscribe to
         #[arg(short, long)]
         feed: String,
     },
     /// Unsubscribe from feed
     Remove {
-        /// Email address of subscriber
-        #[arg(short, long)]
-        email: Option<String>,
-
         /// Feed to unsubscribe from
         #[arg(short, long)]
         feed: String,
@@ -77,11 +69,15 @@ pub async fn send_wrap_up_email(
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let config = if let Some(path) = home_dir()
+    let config_file_path = ".config/freezer/freezer.toml";
+    let (mut config, config_file_path) = if let Some(path) = home_dir()
         && path.exists()
-        && path.join(".config/freezer/freezer.toml").exists()
+        && path.join(config_file_path).exists()
     {
-        Configuration::from_config_file(path.join(".config/freezer/freezer.toml"))
+        (
+            Configuration::from_config_file(path.join(config_file_path)),
+            path.join(config_file_path),
+        )
     } else {
         println!("You appear to be missing your config file");
         return Ok(());
@@ -89,8 +85,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let cli = Cli::parse();
     match cli.command {
-        Commands::Add { email, feed } => todo!(),
-        Commands::Remove { email, feed } => todo!(),
+        Commands::Add { feed } => {
+            config.subscriber.add(feed);
+            config.save(config_file_path);
+        }
+        Commands::Remove { feed } => {
+            config.subscriber.delete(feed);
+            config.save(config_file_path);
+        }
         Commands::Publish { email } => {
             send_wrap_up_email(
                 "Sylvan".to_owned(),

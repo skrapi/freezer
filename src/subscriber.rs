@@ -4,7 +4,7 @@ use std::{
 };
 
 use rss::{Channel, Item, validation::Validate};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 pub fn channel_from_file(file: &str) -> Channel {
     let file = File::open(file).expect("Failed to open file");
@@ -15,7 +15,7 @@ pub fn channel_from_file(file: &str) -> Channel {
     channel
 }
 
-#[derive(Debug, PartialEq, Deserialize)]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct Subscriber {
     name: Option<String>,
     // TODO: Change email to a newtype with validation
@@ -47,12 +47,12 @@ impl Subscriber {
         subscriber
     }
 
-    pub fn add(&mut self, channel: Channel) {
-        self.channels.push(channel.link.clone());
+    pub fn add(&mut self, feed: String) {
+        self.channels.push(feed);
     }
 
-    pub fn delete(&mut self, channel: Channel) {
-        self.channels.retain_mut(|x| x != &channel.link);
+    pub fn delete(&mut self, feed: String) {
+        self.channels.retain_mut(|x| x != &feed);
     }
 
     pub fn send_new_items_in_time_period(&self) {
