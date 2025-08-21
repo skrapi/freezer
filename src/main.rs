@@ -23,6 +23,8 @@ enum Commands {
         #[arg(short, long)]
         feed: String,
     },
+    /// List all subscriptions
+    List,
     /// Publish a collection of the latest feed contents
     Publish {
         /// Email address of subscriber
@@ -86,13 +88,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
     match cli.command {
         Commands::Add { feed } => {
-            config.subscriber.add(feed);
+            config.subscriber.add(feed.clone());
             config.save(config_file_path);
+            println!("Added {feed} to subscriptions.");
         }
         Commands::Remove { feed } => {
-            config.subscriber.delete(feed);
+            config.subscriber.delete(feed.clone());
             config.save(config_file_path);
+            println!("Removed {feed} from subscriptions.");
         }
+        Commands::List => println!("{:?}", config.subscriber.list_subscriptions()),
         Commands::Publish { email } => {
             send_wrap_up_email(
                 "Sylvan".to_owned(),

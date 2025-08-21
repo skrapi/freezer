@@ -55,6 +55,10 @@ impl Subscriber {
         self.channels.retain_mut(|x| x != &feed);
     }
 
+    pub fn list_subscriptions(&self) -> &Vec<String> {
+        &self.channels
+    }
+
     pub fn send_new_items_in_time_period(&self) {
         todo!()
     }
