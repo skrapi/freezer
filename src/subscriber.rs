@@ -3,16 +3,13 @@ use std::{
     io::{BufReader, Read},
 };
 
-use rss::{Channel, Item, validation::Validate};
+use ::futures::future::join_all;
+use feed_rs::model::Feed;
 use serde::{Deserialize, Serialize};
 
-pub fn channel_from_file(file: &str) -> Channel {
+pub fn feed_from_file(file: &str) -> Feed {
     let file = File::open(file).expect("Failed to open file");
-    let channel =
-        Channel::read_from(BufReader::new(file)).expect("Failed to read channel from file.");
-
-    channel.validate().expect("Invalid RSS file.");
-    channel
+    feed_rs::parser::parse(BufReader::new(file)).expect("Failed to read channel from file.")
 }
 
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
@@ -22,12 +19,7 @@ pub struct Subscriber {
     email: String,
     // TODO: Convert to an actual time period
     time_period_hours: usize,
-    channels: Vec<String>,
-}
-
-#[derive(Debug, Deserialize)]
-struct Configuration {
-    subscriber: Subscriber,
+    feeds: Vec<String>,
 }
 
 impl Subscriber {
@@ -37,7 +29,7 @@ impl Subscriber {
             name: None,
             // One week
             time_period_hours: 168,
-            channels: vec![],
+            feeds: vec![],
         }
     }
     pub fn from_config_file(config_file_path: &str) -> Self {
@@ -48,22 +40,42 @@ impl Subscriber {
     }
 
     pub fn add(&mut self, feed: String) {
-        self.channels.push(feed);
+        self.feeds.push(feed);
     }
 
     pub fn delete(&mut self, feed: String) {
-        self.channels.retain_mut(|x| x != &feed);
+        self.feeds.retain_mut(|x| x != &feed);
     }
 
     pub fn list_subscriptions(&self) -> &Vec<String> {
-        &self.channels
+        &self.feeds
     }
 
     pub fn send_new_items_in_time_period(&self) {
         todo!()
     }
 
-    fn collect_all_items_in_time_period(&self) -> Vec<Item> {
+    pub async fn collect_all_feeds(&self) -> Result<Vec<Feed>, Box<dyn std::error::Error>> {
+        let client = reqwest::Client::new();
+
+        Ok(join_all(self.feeds.iter().map(async |url| {
+            feed_rs::parser::parse(
+                client
+                    .get(url)
+                    .send()
+                    .await
+                    .unwrap()
+                    .text()
+                    .await
+                    .unwrap()
+                    .as_bytes(),
+            )
+            .unwrap()
+        }))
+        .await)
+    }
+
+    fn collect_all_items_in_time_period(&self) -> Vec<String> {
         todo!()
     }
 }
@@ -83,21 +95,21 @@ mod tests {
                 email: "kaladin@archive.com".into(),
                 name: Some("Kaladin".into()),
                 time_period_hours: 168,
-                channels: vec!["https://x86.lol/feed.xml".to_string()]
+                feeds: vec!["https://x86.lol/feed.xml".to_string()]
             }
         )
     }
     #[test]
-    fn test_add_channel() {
+    fn test_add_feed() {
         // Arrange
         let mut subscriber = Subscriber::new("kaladin@archive.com".into());
-        let channel = channel_from_file("tests/feed.xml");
 
+        let feed = "test_channel.xml".to_owned();
         // Act
-        subscriber.add(channel.clone());
+        subscriber.add(feed.clone());
 
         // Assert
-        assert_eq!(subscriber.channels[0], channel.link)
+        assert_eq!(subscriber.feeds[0], feed)
     }
 
     // #[test]

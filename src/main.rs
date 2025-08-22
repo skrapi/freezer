@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+use feed_rs::model::Text;
 use freezer::configuration::Configuration;
 
 #[derive(Parser, Debug)]
@@ -99,10 +100,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Commands::List => println!("{:?}", config.subscriber.list_subscriptions()),
         Commands::Publish { email } => {
+            let feeds = format!(
+                "Feeds: {:?}",
+                config
+                    .subscriber
+                    .collect_all_feeds()
+                    .await?
+                    .iter()
+                    .map(|feed| feed
+                        .title
+                        .as_ref()
+                        .map(|f| f.content.clone())
+                        .unwrap_or_default())
+                    .collect::<Vec<String>>()
+            );
             send_wrap_up_email(
                 "Sylvan".to_owned(),
                 email.unwrap(),
-                "Test publish command".to_owned(),
+                feeds,
                 config.sender.app_email,
                 config.sender.app_password,
             )
