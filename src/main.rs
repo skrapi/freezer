@@ -1,3 +1,5 @@
+use std::fmt::format;
+
 use clap::{Parser, Subcommand};
 use feed_rs::model::Text;
 use freezer::configuration::Configuration;
@@ -39,7 +41,7 @@ use lettre::message::header::ContentType;
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{Message, SmtpTransport, Transport};
 
-pub async fn send_wrap_up_email(
+pub async fn send_digest(
     to_name: String,
     to_email: String,
     body: String,
@@ -50,7 +52,10 @@ pub async fn send_wrap_up_email(
     let email = Message::builder()
         .from("Freezer <freezer@sylvansmit.com>".parse()?)
         .to(format!("{to_name} <{to_email}>").parse()?)
-        .subject("Test email from Rust!")
+        .subject(format!(
+            "Freezer digest - {}",
+            chrono::Local::now().format("%Y-%m-%d")
+        ))
         .header(ContentType::TEXT_PLAIN)
         .body(body)?;
 
@@ -114,7 +119,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         .unwrap_or_default())
                     .collect::<Vec<String>>()
             );
-            send_wrap_up_email(
+            send_digest(
                 "Sylvan".to_owned(),
                 email.unwrap(),
                 feeds,
