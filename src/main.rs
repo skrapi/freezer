@@ -1,7 +1,8 @@
 use std::fmt::format;
 
+use chrono::{Date, DateTime, Days, Local, Utc};
 use clap::{Parser, Subcommand};
-use feed_rs::model::Text;
+use feed_rs::model::{Feed, Text};
 use freezer::configuration::Configuration;
 
 #[derive(Parser, Debug)]
@@ -53,7 +54,7 @@ pub async fn send_digest(
         .from("Freezer <freezer@sylvansmit.com>".parse()?)
         .to(format!("{to_name} <{to_email}>").parse()?)
         .subject(format!(
-            "Freezer digest - {}",
+            "Freezer Digest - {}",
             chrono::Local::now().format("%Y-%m-%d")
         ))
         .header(ContentType::TEXT_PLAIN)
@@ -73,6 +74,33 @@ pub async fn send_digest(
     }
 
     Ok(())
+}
+
+fn parse_feed(feed: &Feed, date: DateTime<Utc>) -> Option<String> {
+    // Find all items/entries that have been created after date
+    // Create a url, image and title combindation and pass to string to send
+    // Return None if no valid posts
+
+    let entries = feed
+        .entries
+        .iter()
+        .filter(|entry| {
+            if let Some(published) = entry.published
+                && published > date
+            {
+                true
+            } else {
+                false
+            }
+        })
+        .map(|entry| format!("Title: {:?}, url: {:?}", entry.title, entry.links))
+        .collect::<Vec<String>>();
+
+    if entries.is_empty() {
+        None
+    } else {
+        Some(entries.join("\n"))
+    }
 }
 
 #[tokio::main]
@@ -106,18 +134,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::List => println!("{:?}", config.subscriber.list_subscriptions()),
         Commands::Publish { email } => {
             let feeds = format!(
-                "Feeds: {:?}",
+                "{:?}",
                 config
                     .subscriber
                     .collect_all_feeds()
                     .await?
                     .iter()
-                    .map(|feed| feed
-                        .title
-                        .as_ref()
-                        .map(|f| f.content.clone())
-                        .unwrap_or_default())
-                    .collect::<Vec<String>>()
+                    .map(|feed| parse_feed(
+                        feed,
+                        Utc::now().checked_sub_days(Days::new(7)).unwrap()
+                    ))
             );
             send_digest(
                 "Sylvan".to_owned(),
