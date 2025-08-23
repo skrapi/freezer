@@ -1,8 +1,7 @@
-use std::fmt::format;
 
-use chrono::{Date, DateTime, Days, Local, Utc};
+use chrono::{DateTime, Days, Utc};
 use clap::{Parser, Subcommand};
-use feed_rs::model::{Feed, Text};
+use feed_rs::model::Feed;
 use freezer::configuration::Configuration;
 
 #[derive(Parser, Debug)]

@@ -1,6 +1,6 @@
 use std::{
     fs::{self, File},
-    io::{BufReader, Read},
+    io::BufReader,
 };
 
 use ::futures::future::join_all;
@@ -81,7 +81,7 @@ impl Subscriber {
 }
 
 mod tests {
-    use super::*;
+    
 
     #[test]
     fn test_create_subscriber_from_config_file() {
