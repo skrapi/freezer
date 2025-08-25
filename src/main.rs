@@ -1,6 +1,5 @@
-use chrono::{DateTime, Days, Utc};
+use chrono::{Days, Utc};
 use clap::{Parser, Subcommand};
-use feed_rs::model::Feed;
 use freezer::configuration::Configuration;
 
 #[derive(Parser, Debug)]

@@ -25,6 +25,7 @@ pub struct Subscriber {
 }
 
 impl Subscriber {
+    #[cfg(test)]
     fn new(email: String) -> Self {
         Self {
             email,
@@ -78,12 +79,9 @@ impl Subscriber {
             .await,
         ))
     }
-
-    fn collect_all_items_in_time_period(&self) -> Vec<String> {
-        todo!()
-    }
 }
 
+#[cfg(test)]
 mod tests {
     use crate::subscriber::Subscriber;
 

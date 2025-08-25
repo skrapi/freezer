@@ -76,10 +76,11 @@ impl SimpleEntry {
         }
     }
 }
-mod tests {
-    use chrono::{DateTime, TimeZone, Utc};
 
+#[cfg(test)]
+mod tests {
     use crate::feeds::{Feeds, SimpleEntry};
+    use chrono::{DateTime, TimeZone, Utc};
 
     #[test]
     fn test_get_new_entries() {
