@@ -1,4 +1,4 @@
 name = "Kaladin"
 email = "kaladin@archive.com"
 time_period_hours = 168
-channels = ["https://x86.lol/feed.xml"]
+feeds = ["https://x86.lol/feed.xml"]
