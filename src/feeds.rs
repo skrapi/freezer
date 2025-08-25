@@ -44,19 +44,36 @@ impl Feeds {
 
 #[derive(Debug, PartialEq)]
 pub struct SimpleEntry {
-    title: String,
-    link: String,
+    pub title: String,
+    pub link: String,
+    pub publish_date: String,
 }
 
 impl SimpleEntry {
-    pub fn new(title: String, link: String) -> Self {
-        Self { title, link }
+    pub fn new(title: String, link: String, publish_date: String) -> Self {
+        Self {
+            title,
+            link,
+            publish_date,
+        }
     }
     pub fn from_entry(entry: &Entry) -> Self {
         let title = entry.title.clone().unwrap().content.clone();
         let link = entry.links.first().unwrap().href.clone();
+        let publish_date = entry
+            .published
+            .unwrap()
+            .to_rfc3339()
+            .split_once("T")
+            .unwrap()
+            .0
+            .to_owned();
 
-        Self { title, link }
+        Self {
+            title,
+            link,
+            publish_date,
+        }
     }
 }
 mod tests {
@@ -94,16 +111,17 @@ mod tests {
             .iter()
             .map(|entry| SimpleEntry::from_entry(entry))
             .collect();
-
         // Assert
         let expected_simple_entries = vec![
             SimpleEntry::new(
                 "Quick and Dirty Website Change Monitoring".to_owned(),
                 "https://x86.lol/generic/2025/08/10/change-monitoring.html".to_owned(),
+                "2025-08-10".to_owned(),
             ),
             SimpleEntry::new(
                 "Code Review Can Be Better".to_owned(),
                 "https://tigerbeetle.com/blog/2025-08-04-code-review-can-be-better".to_owned(),
+                "2025-08-04".to_owned(),
             ),
         ];
 

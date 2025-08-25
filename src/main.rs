@@ -75,33 +75,6 @@ pub async fn send_digest(
     Ok(())
 }
 
-fn parse_feed(feed: &Feed, date: DateTime<Utc>) -> Option<String> {
-    // Find all items/entries that have been created after date
-    // Create a url, image and title combindation and pass to string to send
-    // Return None if no valid posts
-
-    let entries = feed
-        .entries
-        .iter()
-        .filter(|entry| {
-            if let Some(published) = entry.published
-                && published > date
-            {
-                true
-            } else {
-                false
-            }
-        })
-        .map(|entry| format!("Title: {:?}, url: {:?}", entry.title, entry.links))
-        .collect::<Vec<String>>();
-
-    if entries.is_empty() {
-        None
-    } else {
-        Some(entries.join("\n"))
-    }
-}
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config_file_path = ".config/freezer/freezer.toml";
