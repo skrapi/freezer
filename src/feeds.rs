@@ -7,6 +7,12 @@ pub struct Feeds {
     feeds: Vec<Feed>,
 }
 
+impl Default for Feeds {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Feeds {
     pub fn new() -> Self {
         Self { feeds: Vec::new() }
@@ -24,7 +30,7 @@ impl Feeds {
             .flat_map(|feed| {
                 feed.entries
                     .iter()
-                    .filter(|entry| entry.published.map_or(false, |date| date > since))
+                    .filter(|entry| entry.published.is_some_and(|date| date > since))
             })
             .collect()
     }
@@ -39,8 +45,8 @@ pub struct SimpleEntry {
 impl SimpleEntry {
     pub fn new(title: String, link: String) -> Self {
         Self {
-            title: title,
-            link: link,
+            title,
+            link,
         }
     }
     pub fn from_entry(entry: &Entry) -> Self {
@@ -51,10 +57,10 @@ impl SimpleEntry {
     }
 }
 mod tests {
-    use chrono::{DateTime, TimeZone, Utc};
-    use feed_rs::model::Entry;
+    
+    
 
-    use crate::feeds::{Feeds, SimpleEntry};
+    
 
     #[test]
     fn test_get_new_entries() {

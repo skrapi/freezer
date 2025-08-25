@@ -81,7 +81,7 @@ impl Subscriber {
 }
 
 mod tests {
-    use crate::subscriber::Subscriber;
+    
 
     #[test]
     fn test_create_subscriber_from_config_file() {
