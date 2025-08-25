@@ -44,10 +44,7 @@ pub struct SimpleEntry {
 
 impl SimpleEntry {
     pub fn new(title: String, link: String) -> Self {
-        Self {
-            title,
-            link,
-        }
+        Self { title, link }
     }
     pub fn from_entry(entry: &Entry) -> Self {
         let title = entry.title.clone().unwrap().content.clone();
@@ -57,10 +54,9 @@ impl SimpleEntry {
     }
 }
 mod tests {
-    
-    
+    use chrono::{DateTime, TimeZone, Utc};
 
-    
+    use crate::feeds::{Feeds, SimpleEntry};
 
     #[test]
     fn test_get_new_entries() {
