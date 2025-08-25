@@ -13,5 +13,5 @@ Config is saved at ~/.config/freezer/freezer.toml
 - [ ] Prettify the email
 - [ ] Connect to the application from mobile
 - [ ] Give a way to unsubscribe from a feed from the mail
-- [ ] Remove the need for an email from the publish command
-- [ ] Remove feed flag from add/remove, just have the feed
+- [x] Remove the need for an email from the publish command
+- [x] Remove feed flag from add/remove, just have the feed
