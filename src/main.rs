@@ -1,4 +1,3 @@
-
 use chrono::{DateTime, Days, Utc};
 use clap::{Parser, Subcommand};
 use feed_rs::model::Feed;
@@ -36,6 +35,7 @@ enum Commands {
     },
 }
 
+use freezer::feeds::SimpleEntry;
 use home::home_dir;
 use lettre::message::header::ContentType;
 use lettre::transport::smtp::authentication::Credentials;
@@ -132,17 +132,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Commands::List => println!("{:?}", config.subscriber.list_subscriptions()),
         Commands::Publish { email } => {
+            let since = Utc::now().checked_sub_days(Days::new(30)).unwrap();
             let feeds = format!(
                 "{:?}",
                 config
                     .subscriber
                     .collect_all_feeds()
                     .await?
+                    .get_new_entries(since)
                     .iter()
-                    .map(|feed| parse_feed(
-                        feed,
-                        Utc::now().checked_sub_days(Days::new(7)).unwrap()
-                    ))
+                    .map(|entry| SimpleEntry::from_entry(entry))
+                    .collect::<Vec<SimpleEntry>>()
             );
             send_digest(
                 "Sylvan".to_owned(),

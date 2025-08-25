@@ -7,6 +7,8 @@ use ::futures::future::join_all;
 use feed_rs::model::Feed;
 use serde::{Deserialize, Serialize};
 
+use crate::feeds::Feeds;
+
 pub fn feed_from_file(file: &str) -> Feed {
     let file = File::open(file).expect("Failed to open file");
     feed_rs::parser::parse(BufReader::new(file)).expect("Failed to read channel from file.")
@@ -55,24 +57,26 @@ impl Subscriber {
         todo!()
     }
 
-    pub async fn collect_all_feeds(&self) -> Result<Vec<Feed>, Box<dyn std::error::Error>> {
+    pub async fn collect_all_feeds(&self) -> Result<Feeds, Box<dyn std::error::Error>> {
         let client = reqwest::Client::new();
 
-        Ok(join_all(self.feeds.iter().map(async |url| {
-            feed_rs::parser::parse(
-                client
-                    .get(url)
-                    .send()
-                    .await
-                    .unwrap()
-                    .text()
-                    .await
-                    .unwrap()
-                    .as_bytes(),
-            )
-            .unwrap()
-        }))
-        .await)
+        Ok(Feeds::from(
+            join_all(self.feeds.iter().map(async |url| {
+                feed_rs::parser::parse(
+                    client
+                        .get(url)
+                        .send()
+                        .await
+                        .unwrap()
+                        .text()
+                        .await
+                        .unwrap()
+                        .as_bytes(),
+                )
+                .unwrap()
+            }))
+            .await,
+        ))
     }
 
     fn collect_all_items_in_time_period(&self) -> Vec<String> {

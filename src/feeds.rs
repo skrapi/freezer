@@ -7,6 +7,12 @@ pub struct Feeds {
     feeds: Vec<Feed>,
 }
 
+impl From<Vec<Feed>> for Feeds {
+    fn from(feeds: Vec<Feed>) -> Self {
+        Feeds { feeds }
+    }
+}
+
 impl Default for Feeds {
     fn default() -> Self {
         Self::new()
