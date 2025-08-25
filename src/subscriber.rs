@@ -111,24 +111,4 @@ mod tests {
         // Assert
         assert_eq!(subscriber.feeds[0], feed)
     }
-
-    // #[test]
-    // fn test_get_all_items_in_time_period() {
-    //     // Arrange
-    //     let mut subscriber = Subscriber::new("kaladin@archive.com".into());
-    //     let channel = channel_from_file("tests/feed.xml");
-    //     subscriber.add(channel.clone());
-    //     let actual_items = channel.into_items().split_off(1);
-    //
-    //     // TODO: Figure out how to declare a static date;
-    //     // needs to be less than a week after
-    //     // Sun, 10 Aug 2025 00:00:00 +0000
-    //     let current_date = todo!();
-    //
-    //     // Act
-    //     let collected_items = subscriber.collect_all_items_in_time_period();
-    //
-    //     // Assert
-    //     assert_eq!(collected_items, actual_items);
-    // }
 }
