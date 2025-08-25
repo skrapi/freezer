@@ -15,23 +15,17 @@ enum Commands {
     /// Subscribe to new feed
     Add {
         /// Feed to subscribe to
-        #[arg(short, long)]
         feed: String,
     },
     /// Unsubscribe from feed
     Remove {
         /// Feed to unsubscribe from
-        #[arg(short, long)]
         feed: String,
     },
     /// List all subscriptions
     List,
     /// Publish a collection of the latest feed contents
-    Publish {
-        /// Email address of subscriber
-        #[arg(short, long)]
-        email: Option<String>,
-    },
+    Publish,
 }
 
 use freezer::feeds::SimpleEntry;
@@ -103,7 +97,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("Removed {feed} from subscriptions.");
         }
         Commands::List => println!("{:?}", config.subscriber.list_subscriptions()),
-        Commands::Publish { email } => {
+        Commands::Publish => {
             let since = Utc::now().checked_sub_days(Days::new(30)).unwrap();
             let feeds = format!(
                 "{:?}",
@@ -118,7 +112,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             );
             send_digest(
                 "Sylvan".to_owned(),
-                email.unwrap(),
+                config.subscriber.email().to_owned(),
                 feeds,
                 config.sender.app_email,
                 config.sender.app_password,

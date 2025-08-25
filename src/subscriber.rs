@@ -42,6 +42,9 @@ impl Subscriber {
         subscriber
     }
 
+    pub fn email(&self) -> &str {
+        &self.email
+    }
     pub fn add(&mut self, feed: String) {
         self.feeds.push(feed);
     }
