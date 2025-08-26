@@ -16,7 +16,7 @@ pub fn feed_from_file(file: &str) -> Feed {
 
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 pub struct Subscriber {
-    name: Option<String>,
+    name: String,
     // TODO: Change email to a newtype with validation
     email: String,
     // TODO: Convert to an actual time period
@@ -29,7 +29,7 @@ impl Subscriber {
     fn new(email: String) -> Self {
         Self {
             email,
-            name: None,
+            name: "Sylvan".to_owned(),
             // One week
             time_period_hours: 168,
             feeds: vec![],
@@ -44,6 +44,10 @@ impl Subscriber {
 
     pub fn email(&self) -> &str {
         &self.email
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
     }
     pub fn add(&mut self, feed: String) {
         self.feeds.push(feed);
@@ -98,7 +102,7 @@ mod tests {
             subscriber,
             Subscriber {
                 email: "kaladin@archive.com".into(),
-                name: Some("Kaladin".into()),
+                name: "Kaladin".into(),
                 time_period_hours: 168,
                 feeds: vec!["https://x86.lol/feed.xml".to_string()]
             }

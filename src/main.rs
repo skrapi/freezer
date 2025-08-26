@@ -28,6 +28,7 @@ enum Commands {
     Publish,
 }
 
+use freezer::digest::Digest;
 use freezer::feeds::SimpleEntry;
 use home::home_dir;
 use lettre::message::header::ContentType;
@@ -99,21 +100,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::List => println!("{:?}", config.subscriber.list_subscriptions()),
         Commands::Publish => {
             let since = Utc::now().checked_sub_days(Days::new(30)).unwrap();
-            let feeds = format!(
-                "{:?}",
-                config
-                    .subscriber
-                    .collect_all_feeds()
-                    .await?
-                    .get_new_entries(since)
-                    .iter()
-                    .map(|entry| SimpleEntry::from_entry(entry))
-                    .collect::<Vec<SimpleEntry>>()
-            );
+            let feeds = config
+                .subscriber
+                .collect_all_feeds()
+                .await?
+                .get_new_entries(since)
+                .iter()
+                .map(|entry| SimpleEntry::from_entry(entry))
+                .collect::<Vec<SimpleEntry>>();
+
+            let digest = Digest::new(feeds, Utc::now(), config.subscriber.name().to_owned());
             send_digest(
-                "Sylvan".to_owned(),
+                config.subscriber.name().to_owned(),
                 config.subscriber.email().to_owned(),
-                feeds,
+                digest.plaintext(),
                 config.sender.app_email,
                 config.sender.app_password,
             )

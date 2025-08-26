@@ -7,11 +7,11 @@ Config is saved at ~/.config/freezer/freezer.toml
 
 
 ## ToDos
-- [ ] Add caching to prevent ratelimiting on already fetched RSS feeds
-- [ ] Track last time a digest was sent
-- [ ] Set up a scheduled digest publish action
-- [ ] Prettify the email
-- [ ] Connect to the application from mobile
-- [ ] Give a way to unsubscribe from a feed from the mail
 - [x] Remove the need for an email from the publish command
 - [x] Remove feed flag from add/remove, just have the feed
+- [ ] Connect to the application from mobile
+- [ ] Track last time a digest was sent
+- [ ] Add caching to prevent ratelimiting on already fetched RSS feeds
+- [ ] Set up a scheduled digest publish action
+- [ ] Prettify the email
+- [ ] Give a way to unsubscribe from a feed from the mail
