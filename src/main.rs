@@ -99,7 +99,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Commands::List => println!("{:?}", config.subscriber.list_subscriptions()),
         Commands::Publish => {
-            let since = Utc::now().checked_sub_days(Days::new(30)).unwrap();
+            let since = Utc::now()
+                .checked_sub_days(Days::new(config.subscriber.time_period_days()))
+                .unwrap();
             let feeds = config
                 .subscriber
                 .collect_all_feeds()
