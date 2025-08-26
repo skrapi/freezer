@@ -24,9 +24,7 @@ impl Digest {
     pub fn plaintext(&self) -> String {
         let mut string_list = vec![
             format!(
-                r"Hello {},
-
-        Here are new articles from subcribed feeds.",
+                "Hello {},\n\nHere are new articles from subcribed feeds.",
                 self.recipient_name
             )
             .to_owned(),
@@ -35,17 +33,14 @@ impl Digest {
             .entries
             .iter()
             .map(|entry| {
-                format!("{} - {}\n{}\n", entry.title, entry.publish_date, entry.link).to_owned()
+                format!("{} - {}\n{}", entry.title, entry.publish_date, entry.link).to_owned()
             })
             .collect::<Vec<String>>();
-        let sign_off = r"Kind regards,
-        Sylvan
-        "
-        .to_owned();
+        let sign_off = "Kind regards,\nSylvan".to_owned();
 
         string_list.append(&mut article_list);
         string_list.push(sign_off);
-        string_list.join("\n")
+        string_list.join("\n\n")
     }
 }
 
@@ -77,17 +72,16 @@ mod tests {
 
         let expected_plaintext = r"Hello Sylvan,
 
-        Here are new articles from subcribed feeds.
+Here are new articles from subcribed feeds.
 
-        Quick and Dirty Website Change Monitoring - 2025-08-10
-        https://x86.lol/generic/2025/08/10/change-monitoring.html
+Quick and Dirty Website Change Monitoring - 2025-08-10
+https://x86.lol/generic/2025/08/10/change-monitoring.html
 
-        Code Review Can Be Better - 2025-08-04
-        https://tigerbeetle.com/blog/2025-08-04-code-review-can-be-better
+Code Review Can Be Better - 2025-08-04
+https://tigerbeetle.com/blog/2025-08-04-code-review-can-be-better
 
-        Kind regards,
-        Sylvan
-        ";
+Kind regards,
+Sylvan";
 
         // Act
         let plaintext = digest.plaintext();
