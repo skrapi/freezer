@@ -22,7 +22,30 @@ impl Digest {
     }
 
     pub fn plaintext(&self) -> String {
-        todo!()
+        let mut string_list = vec![
+            format!(
+                r"Hello {},
+
+        Here are new articles from subcribed feeds.",
+                self.recipient_name
+            )
+            .to_owned(),
+        ];
+        let mut article_list = self
+            .entries
+            .iter()
+            .map(|entry| {
+                format!("{} - {}\n{}\n", entry.title, entry.publish_date, entry.link).to_owned()
+            })
+            .collect::<Vec<String>>();
+        let sign_off = r"Kind regards,
+        Sylvan
+        "
+        .to_owned();
+
+        string_list.append(&mut article_list);
+        string_list.push(sign_off);
+        string_list.join("\n")
     }
 }
 
