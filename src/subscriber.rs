@@ -20,7 +20,7 @@ pub struct Subscriber {
     // TODO: Change email to a newtype with validation
     email: String,
     // TODO: Convert to an actual time period
-    time_period_hours: usize,
+    time_period_hours: u64,
     feeds: Vec<String>,
 }
 
@@ -61,8 +61,8 @@ impl Subscriber {
         &self.feeds
     }
 
-    pub fn send_new_items_in_time_period(&self) {
-        todo!()
+    pub fn time_period_days(&self) -> u64 {
+        self.time_period_hours.div_ceil(24).max(1)
     }
 
     pub async fn collect_all_feeds(&self) -> Result<Feeds, Box<dyn std::error::Error>> {
@@ -119,5 +119,18 @@ mod tests {
 
         // Assert
         assert_eq!(subscriber.feeds[0], feed)
+    }
+
+    #[test]
+    fn test_time_period_days() {
+        // Arrange
+        let mut subscriber = Subscriber::new("kaladin@archive.com".into());
+        subscriber.time_period_hours = 168;
+
+        // Act
+        let days = subscriber.time_period_days();
+
+        // Assert
+        assert_eq!(days, 7)
     }
 }
