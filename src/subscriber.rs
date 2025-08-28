@@ -5,13 +5,41 @@ use std::{
 
 use ::futures::future::join_all;
 use feed_rs::model::Feed;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::collections::HashSet;
+use std::hash::Hash;
 
 use crate::feeds::Feeds;
 
 pub fn feed_from_file(file: &str) -> Feed {
     let file = File::open(file).expect("Failed to open file");
     feed_rs::parser::parse(BufReader::new(file)).expect("Failed to read channel from file.")
+}
+
+/// Custom deserialize function: Vec -> HashSet
+fn deserialize_hashset<'de, D, T>(deserializer: D) -> Result<HashSet<T>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de> + Eq + Hash,
+{
+    let vec = Vec::<T>::deserialize(deserializer)?;
+    Ok(vec.into_iter().collect())
+}
+
+/// Custom serialize function: HashSet -> Vec
+fn serialize_hashset<S, T>(hashset: &HashSet<T>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+    T: Serialize + Clone,
+{
+    let mut vec: Vec<T> = hashset.iter().cloned().collect();
+    vec.sort_by(|a, b| {
+        // For consistent ordering, we serialize to string and compare
+        let a_str = toml::to_string(a).unwrap_or_default();
+        let b_str = toml::to_string(b).unwrap_or_default();
+        a_str.cmp(&b_str)
+    });
+    vec.serialize(serializer)
 }
 
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
@@ -21,7 +49,11 @@ pub struct Subscriber {
     email: String,
     // TODO: Convert to an actual time period
     time_period_hours: u64,
-    feeds: Vec<String>,
+    #[serde(
+        deserialize_with = "deserialize_hashset",
+        serialize_with = "serialize_hashset"
+    )]
+    feeds: HashSet<String>,
 }
 
 impl Subscriber {
@@ -32,7 +64,7 @@ impl Subscriber {
             name: "Sylvan".to_owned(),
             // One week
             time_period_hours: 168,
-            feeds: vec![],
+            feeds: HashSet::new(),
         }
     }
     pub fn from_config_file(config_file_path: &str) -> Self {
@@ -49,15 +81,15 @@ impl Subscriber {
     pub fn name(&self) -> &str {
         &self.name
     }
-    pub fn add(&mut self, feed: String) {
-        self.feeds.push(feed);
+    pub fn add(&mut self, feed: String) -> bool {
+        self.feeds.insert(feed)
     }
 
-    pub fn delete(&mut self, feed: String) {
-        self.feeds.retain_mut(|x| x != &feed);
+    pub fn delete(&mut self, feed: &str) -> bool {
+        self.feeds.remove(feed)
     }
 
-    pub fn list_subscriptions(&self) -> &Vec<String> {
+    pub fn list_subscriptions(&self) -> &HashSet<String> {
         &self.feeds
     }
 
@@ -90,6 +122,8 @@ impl Subscriber {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use crate::subscriber::Subscriber;
 
     #[test]
@@ -97,16 +131,18 @@ mod tests {
         // Arrange & Act
         let subscriber = Subscriber::from_config_file("tests/config.toml");
 
+        let mut feeds = HashSet::new();
+        feeds.insert("https://x86.lol/feed.xml".to_string());
+
+        let correct_subscriber = Subscriber {
+            email: "kaladin@archive.com".into(),
+            name: "Kaladin".into(),
+            time_period_hours: 168,
+            feeds,
+        };
+
         // Assert
-        assert_eq!(
-            subscriber,
-            Subscriber {
-                email: "kaladin@archive.com".into(),
-                name: "Kaladin".into(),
-                time_period_hours: 168,
-                feeds: vec!["https://x86.lol/feed.xml".to_string()]
-            }
-        )
+        assert_eq!(subscriber, correct_subscriber)
     }
     #[test]
     fn test_add_feed() {
@@ -118,7 +154,7 @@ mod tests {
         subscriber.add(feed.clone());
 
         // Assert
-        assert_eq!(subscriber.feeds[0], feed)
+        assert_eq!(subscriber.feeds.contains(&feed), true)
     }
 
     #[test]

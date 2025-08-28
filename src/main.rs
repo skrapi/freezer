@@ -93,7 +93,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("Added {feed} to subscriptions.");
         }
         Commands::Remove { feed } => {
-            config.subscriber.delete(feed.clone());
+            config.subscriber.delete(&feed);
             config.save(config_file_path);
             println!("Removed {feed} from subscriptions.");
         }
