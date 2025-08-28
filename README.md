@@ -1,5 +1,12 @@
 # Freezer
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
+<p align="center">
+  <a href="https://github.com/skrapi/freezer/actions/workflows/general.yml">
+    <img src="https://github.com/skrapi/freezer/actions/workflows/general.yml/badge.svg" alt="Build and Test Status">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT">
+  </a>
+</p>
 
 A command line tool to manage and publish a personal digest of articles. The core premise is keeping a list of RSS and Atom feeds, and then publishing any new articles in the last week to email. 
 
