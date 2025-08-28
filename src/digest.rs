@@ -24,8 +24,9 @@ impl Digest {
     pub fn plaintext(&self) -> String {
         let mut string_list = vec![
             format!(
-                "Hello {},\n\nHere are new articles from subcribed feeds.",
-                self.recipient_name
+                "Hello {},\n\nHere are new articles from subcribed feeds, as of {}.",
+                self.recipient_name,
+                self.publish_date.to_rfc3339().split_once("T").unwrap().0
             )
             .to_owned(),
         ];
@@ -67,12 +68,12 @@ mod tests {
             },
         ];
 
-        let now: DateTime<Utc> = Utc.with_ymd_and_hms(2025, 07, 31, 12, 30, 00).unwrap();
+        let now: DateTime<Utc> = Utc.with_ymd_and_hms(2025, 08, 11, 12, 30, 00).unwrap();
         let digest = Digest::new(entries, now, "Sylvan".to_owned());
 
         let expected_plaintext = r"Hello Sylvan,
 
-Here are new articles from subcribed feeds.
+Here are new articles from subcribed feeds, as of 2025-08-11.
 
 Quick and Dirty Website Change Monitoring - 2025-08-10
 https://x86.lol/generic/2025/08/10/change-monitoring.html
