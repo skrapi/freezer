@@ -1,6 +1,12 @@
 use chrono::{Days, Utc};
 use clap::{Parser, Subcommand};
 use freezer::configuration::Configuration;
+use freezer::digest::Digest;
+use freezer::feeds::SimpleEntry;
+use home::home_dir;
+use lettre::message::header::ContentType;
+use lettre::transport::smtp::authentication::Credentials;
+use lettre::{Message, SmtpTransport, Transport};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -27,13 +33,6 @@ enum Commands {
     /// Publish a collection of the latest feed contents
     Publish,
 }
-
-use freezer::digest::Digest;
-use freezer::feeds::SimpleEntry;
-use home::home_dir;
-use lettre::message::header::ContentType;
-use lettre::transport::smtp::authentication::Credentials;
-use lettre::{Message, SmtpTransport, Transport};
 
 pub async fn send_digest(
     to_name: String,
