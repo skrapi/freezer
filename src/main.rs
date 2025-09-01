@@ -87,7 +87,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
     match cli.command {
         Commands::Add { feed } => {
-            config.subscriber.add(feed.clone());
+            config.subscriber.add(
+                feed.clone(),
+                Utc::now()
+                    .to_rfc3339()
+                    .split_once("T")
+                    .unwrap()
+                    .0
+                    .to_string(),
+            );
             config.save(config_file_path);
             println!("Added {feed} to subscriptions.");
         }
