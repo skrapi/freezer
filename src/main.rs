@@ -118,6 +118,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .map(|entry| SimpleEntry::from_entry(entry))
                 .collect::<Vec<SimpleEntry>>();
 
+            if feeds.is_empty() {
+                println!("No new articles since {since}, skipping digest.");
+                return Ok(());
+            }
+
             let digest = Digest::new(feeds, Utc::now(), config.subscriber.name().to_owned());
             send_digest(
                 config.subscriber.name().to_owned(),

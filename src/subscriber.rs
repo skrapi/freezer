@@ -16,6 +16,15 @@ pub fn feed_from_file(file: &str) -> Feed {
     feed_rs::parser::parse(BufReader::new(file)).expect("Failed to read channel from file.")
 }
 
+/// Fetch and parse a single feed, returning an error instead of panicking.
+async fn fetch_feed(
+    client: &reqwest::Client,
+    url: &str,
+) -> Result<Feed, Box<dyn std::error::Error>> {
+    let body = client.get(url).send().await?.text().await?;
+    Ok(feed_rs::parser::parse(body.as_bytes())?)
+}
+
 /// Custom deserialize function: Vec -> HashMap
 fn deserialize_hashset<'de, D, T>(deserializer: D) -> Result<HashMap<T, T>, D::Error>
 where
@@ -106,23 +115,22 @@ impl Subscriber {
     pub async fn collect_all_feeds(&self) -> Result<Feeds, Box<dyn std::error::Error>> {
         let client = reqwest::Client::new();
 
-        Ok(Feeds::from(
-            join_all(self.feeds.iter().map(async |(url, _date)| {
-                feed_rs::parser::parse(
-                    client
-                        .get(url)
-                        .send()
-                        .await
-                        .unwrap()
-                        .text()
-                        .await
-                        .unwrap()
-                        .as_bytes(),
-                )
-                .unwrap()
-            }))
-            .await,
-        ))
+        let feeds =
+            join_all(self.feeds.iter().map(
+                async |(url, _date)| match fetch_feed(&client, url).await {
+                    Ok(feed) => Some(feed),
+                    Err(e) => {
+                        eprintln!("Skipping feed {url}: {e}");
+                        None
+                    }
+                },
+            ))
+            .await
+            .into_iter()
+            .flatten()
+            .collect::<Vec<Feed>>();
+
+        Ok(Feeds::from(feeds))
     }
 }
 
